@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import type { GroupedPlayer, StatMode } from './types';
 import { fetchPlayerStats } from './fetchData';
 import Navbar from './components/Navbar';
@@ -8,9 +8,30 @@ import PlayerDashboard from './components/PlayerDashboard';
 import TeamDashboard from './components/TeamDashboard';
 import { Loader2 } from 'lucide-react';
 
+interface LocationState {
+  selectedSteamId?: string;
+}
+
 function PlayersPage({ players }: { players: GroupedPlayer[] }) {
-  const [selectedPlayer, setSelectedPlayer] = useState<GroupedPlayer | null>(null);
+  const location = useLocation();
+  const state = location.state as LocationState | null;
+  
+  const initialPlayer = state?.selectedSteamId 
+    ? players.find(p => p.steamId === state.selectedSteamId) ?? null
+    : null;
+  
+  const [selectedPlayer, setSelectedPlayer] = useState<GroupedPlayer | null>(initialPlayer);
   const [mode, setMode] = useState<StatMode>('regulation');
+  
+  useEffect(() => {
+    if (state?.selectedSteamId) {
+      const player = players.find(p => p.steamId === state.selectedSteamId);
+      if (player) {
+        setSelectedPlayer(player);
+      }
+      window.history.replaceState({}, document.title);
+    }
+  }, [state?.selectedSteamId, players]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">

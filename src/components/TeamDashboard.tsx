@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Building2, Users, Trophy, ChevronDown, Star, TrendingUp, Target, Shield, Loader2, Crown, X, UserPlus, ArrowRightLeft, Crosshair, Zap, Eye, Award, Flame } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Building2, Users, Trophy, ChevronDown, Star, TrendingUp, Target, Shield, Loader2, Crown, X, UserPlus, ArrowRightLeft, Crosshair, Zap, Eye, Award, Flame, ExternalLink } from 'lucide-react';
 import type { GroupedPlayer, StatMode, PlayerStats } from '../types';
 import { fetchFranchises, fetchAllPlayers, getPlayerTypeLabel, getPlayerTypeColor, type Franchise, type CscPlayer, type FranchiseTeam, type FranchisePlayer } from '../fetchFranchises';
 import ModeToggle from './ModeToggle';
@@ -32,7 +33,11 @@ function pct(val: number): string {
   return `${(val * 100).toFixed(1)}%`;
 }
 
+const STORAGE_KEY_FRANCHISE = 'fragg_selected_franchise';
+const STORAGE_KEY_TEAM = 'fragg_selected_team';
+
 export default function TeamDashboard({ players }: Props) {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<StatMode>('regulation');
   const [selectedFranchise, setSelectedFranchise] = useState<Franchise | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<FranchiseTeam | null>(null);
@@ -45,19 +50,63 @@ export default function TeamDashboard({ players }: Props) {
   const [selectedPlayer, setSelectedPlayer] = useState<RosterPlayer | null>(null);
   const [showReplacementFinder, setShowReplacementFinder] = useState(false);
   const [playerToReplace, setPlayerToReplace] = useState<RosterPlayer | null>(null);
+  const [hasRestoredFromStorage, setHasRestoredFromStorage] = useState(false);
 
   useEffect(() => {
     Promise.all([fetchFranchises(), fetchAllPlayers()])
       .then(([franchiseData, playerData]) => {
         setFranchises(franchiseData);
         setAllCscPlayers(playerData);
+        
+        // Restore saved franchise selection from localStorage
+        const savedFranchiseName = localStorage.getItem(STORAGE_KEY_FRANCHISE);
+        const savedTeamName = localStorage.getItem(STORAGE_KEY_TEAM);
+        
+        if (savedFranchiseName) {
+          const franchise = franchiseData.find(f => f.name === savedFranchiseName);
+          if (franchise) {
+            setSelectedFranchise(franchise);
+            
+            if (savedTeamName) {
+              const team = franchise.teams.find(t => t.name === savedTeamName);
+              if (team) {
+                setSelectedTeam(team);
+              }
+            }
+          }
+        }
+        
+        setHasRestoredFromStorage(true);
         setLoading(false);
       })
       .catch((err) => {
         setError(err.message);
+        setHasRestoredFromStorage(true);
         setLoading(false);
       });
   }, []);
+  
+  // Save franchise selection to localStorage (only after initial restore)
+  useEffect(() => {
+    if (!hasRestoredFromStorage) return;
+    
+    if (selectedFranchise) {
+      localStorage.setItem(STORAGE_KEY_FRANCHISE, selectedFranchise.name);
+    } else {
+      localStorage.removeItem(STORAGE_KEY_FRANCHISE);
+    }
+  }, [selectedFranchise, hasRestoredFromStorage]);
+  
+  // Save team selection to localStorage (only after initial restore)
+  useEffect(() => {
+    if (!hasRestoredFromStorage) return;
+    
+    if (selectedTeam) {
+      localStorage.setItem(STORAGE_KEY_TEAM, selectedTeam.name);
+    } else {
+      localStorage.removeItem(STORAGE_KEY_TEAM);
+    }
+  }, [selectedTeam, hasRestoredFromStorage]);
 
   const freeAgents = useMemo(() => {
     return allCscPlayers.filter((p) => 
@@ -945,13 +994,24 @@ export default function TeamDashboard({ players }: Props) {
 
               {/* Actions */}
               <div className="flex gap-3 pt-4 border-t border-white/10">
+                {selectedPlayer.groupedPlayer && (
+                  <button
+                    onClick={() => {
+                      navigate('/', { state: { selectedSteamId: selectedPlayer.franchisePlayer.steam64Id } });
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-neon-blue/15 text-neon-blue border border-neon-blue/30 hover:bg-neon-blue/25 transition-colors cursor-pointer"
+                  >
+                    <ExternalLink size={18} />
+                    View Full Stats
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setPlayerToReplace(selectedPlayer);
                     setShowReplacementFinder(true);
                     setSelectedPlayer(null);
                   }}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-neon-cyan/15 text-neon-cyan border border-neon-cyan/30 hover:bg-neon-cyan/25 transition-colors"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-neon-cyan/15 text-neon-cyan border border-neon-cyan/30 hover:bg-neon-cyan/25 transition-colors cursor-pointer"
                 >
                   <ArrowRightLeft size={18} />
                   Find Replacements
@@ -1019,9 +1079,9 @@ export default function TeamDashboard({ players }: Props) {
                         <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">Status</th>
                         <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">Games</th>
                         <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">Rating</th>
+                        <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400 cursor-help" title="Rating per 1K MMR - Higher = better value">Efficiency</th>
                         <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">ADR</th>
                         <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">KAST</th>
-                        <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">K/D</th>
                         <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">vs Current</th>
                       </tr>
                     </thead>
@@ -1029,6 +1089,9 @@ export default function TeamDashboard({ players }: Props) {
                       {replacementCandidates.map((candidate, i) => {
                         const ratingDiff = candidate.stats && playerToReplace.stats
                           ? candidate.stats.finalRating - playerToReplace.stats.finalRating
+                          : null;
+                        const efficiency = candidate.stats && candidate.cscPlayer.mmr > 0
+                          ? (candidate.stats.finalRating / candidate.cscPlayer.mmr) * 1000
                           : null;
                         return (
                           <tr
@@ -1061,11 +1124,17 @@ export default function TeamDashboard({ players }: Props) {
                                 <span className="text-slate-500">-</span>
                               )}
                             </td>
+                            <td className="px-4 py-3">
+                              {efficiency !== null ? (
+                                <span className={`font-bold ${efficiency > 3.0 ? 'text-emerald-400' : efficiency > 2.5 ? 'text-neon-cyan' : 'text-yellow-400'}`}>
+                                  {efficiency.toFixed(2)}
+                                </span>
+                              ) : (
+                                <span className="text-slate-500">-</span>
+                              )}
+                            </td>
                             <td className="px-4 py-3 text-slate-300">{candidate.stats?.adr.toFixed(1) ?? '-'}</td>
                             <td className="px-4 py-3 text-slate-300">{candidate.stats ? pct(candidate.stats.kast) : '-'}</td>
-                            <td className="px-4 py-3 text-slate-300">
-                              {candidate.stats ? kdRatio(candidate.stats.kills, candidate.stats.deaths) : '-'}
-                            </td>
                             <td className="px-4 py-3">
                               {ratingDiff !== null ? (
                                 <span className={`font-bold ${ratingDiff >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>

@@ -123,6 +123,10 @@ export interface PlayerStats {
   teamFlashDurationPerRound: number;
   exitFrags: number;
   earlyDeaths: number;
+  manAdvantageKills: number;
+  manAdvantageKillsPct: number;
+  manDisadvantageDeaths: number;
+  manDisadvantageDeathsPct: number;
   lowBuyKills: number;
   lowBuyKillsPct: number;
   disadvantagedBuyKills: number;
@@ -145,6 +149,10 @@ export interface PlayerStats {
   tKast: number;
   tClutchRounds: number;
   tClutchWins: number;
+  tManAdvantageKills: number;
+  tManAdvantageKillsPct: number;
+  tManDisadvantageDeaths: number;
+  tManDisadvantageDeathsPct: number;
   tRating: number;
   tEcoRating: number;
   ctRoundsPlayed: number;
@@ -157,6 +165,10 @@ export interface PlayerStats {
   ctKast: number;
   ctClutchRounds: number;
   ctClutchWins: number;
+  ctManAdvantageKills: number;
+  ctManAdvantageKillsPct: number;
+  ctManDisadvantageDeaths: number;
+  ctManDisadvantageDeathsPct: number;
   ctRating: number;
   ctEcoRating: number;
   ancientRating: number;
