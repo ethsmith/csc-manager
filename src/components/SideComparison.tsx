@@ -72,8 +72,11 @@ export default function SideComparison({ player }: Props) {
   };
 
   return (
-    <div className="glass rounded-xl p-6 card-glow">
-      <h3 className="text-lg font-semibold text-neon-blue mb-4">T vs CT Side</h3>
+    <div className="glass rounded-xl p-6 card-glow group">
+      <h3 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
+        <span className="w-1.5 h-5 bg-gradient-to-b from-yellow-400 to-neon-blue rounded-full"></span>
+        T vs CT Side
+      </h3>
       <div className="h-64">
         <Bar data={data} options={options} />
       </div>

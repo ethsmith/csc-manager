@@ -338,9 +338,11 @@ export default function PlayerList({ players, mode, onModeChange, onSelect }: Pr
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3 flex-wrap">
-        <h1 className="text-3xl font-bold neon-glow flex items-center gap-3">
-          <Trophy size={32} className="text-neon-blue" />
-          FRAGG 3.0 Stats
+        <h1 className="text-3xl font-bold flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-gradient-to-br from-neon-blue/20 to-neon-purple/20 border border-neon-blue/30">
+            <Trophy size={28} className="text-neon-blue" />
+          </div>
+          <span className="gradient-text">FRAGG 3.0 Stats</span>
         </h1>
         <div className="flex items-center gap-3 ml-auto">
           <ModeToggle mode={mode} onChange={(m) => { setTierFilter('all'); onModeChange(m); }} />
@@ -539,30 +541,32 @@ export default function PlayerList({ players, mode, onModeChange, onSelect }: Pr
                 <tr
                   key={gp.steamId}
                   onClick={() => onSelect(gp)}
-                  className={`border-b border-white/5 cursor-pointer transition-all duration-200 hover:bg-neon-blue/5 ${
-                    i % 2 === 0 ? 'bg-white/[0.01]' : ''
+                  className={`border-b border-white/5 cursor-pointer table-row-hover ${
+                    i % 2 === 0 ? 'bg-white/[0.02]' : 'bg-transparent'
                   }`}
                 >
                   <td className="px-4 py-3 font-medium text-slate-200 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-neon-blue/30 to-neon-purple/30 flex items-center justify-center text-xs font-bold text-neon-blue border border-neon-blue/20">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-neon-blue/30 to-neon-purple/30 flex items-center justify-center text-sm font-bold text-neon-blue border border-neon-blue/30 shadow-lg shadow-neon-blue/10 avatar-ring">
                         {gp.name.charAt(0).toUpperCase()}
                       </div>
-                      {gp.name}
+                      <span className="font-semibold">{gp.name}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${
+                    <span className={`text-xs px-2.5 py-1 rounded-full border whitespace-nowrap font-medium ${
                       mode === 'scrim'
-                        ? 'bg-neon-purple/10 text-neon-purple border-neon-purple/20'
-                        : 'bg-neon-blue/10 text-neon-blue border-neon-blue/20'
+                        ? 'bg-neon-purple/15 text-neon-purple border-neon-purple/30'
+                        : 'bg-neon-blue/15 text-neon-blue border-neon-blue/30'
                     }`}>
                       {stats.tier}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-slate-300">{stats.games}</td>
-                  <td className={`px-4 py-3 font-bold ${ratingColor(stats.finalRating)}`}>
-                    {stats.finalRating.toFixed(3)}
+                  <td className="px-4 py-3">
+                    <span className={`font-bold text-lg ${ratingColor(stats.finalRating)}`}>
+                      {stats.finalRating.toFixed(3)}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-slate-300">{stats.kills}</td>
                   <td className="px-4 py-3 text-slate-300">{stats.adr.toFixed(1)}</td>

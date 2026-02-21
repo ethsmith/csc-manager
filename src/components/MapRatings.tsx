@@ -27,8 +27,11 @@ export default function MapRatings({ player }: Props) {
 
   if (maps.length === 0) {
     return (
-      <div className="glass rounded-xl p-6 card-glow">
-        <h3 className="text-lg font-semibold text-neon-blue mb-4">Map Ratings</h3>
+      <div className="glass rounded-xl p-6 card-glow group">
+        <h3 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
+          <span className="w-1.5 h-5 bg-gradient-to-b from-neon-purple to-neon-pink rounded-full"></span>
+          Map Ratings
+        </h3>
         <p className="text-slate-500 text-sm">No map data available</p>
       </div>
     );
@@ -86,8 +89,11 @@ export default function MapRatings({ player }: Props) {
   };
 
   return (
-    <div className="glass rounded-xl p-6 card-glow">
-      <h3 className="text-lg font-semibold text-neon-blue mb-4">Map Ratings</h3>
+    <div className="glass rounded-xl p-6 card-glow group">
+      <h3 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
+        <span className="w-1.5 h-5 bg-gradient-to-b from-neon-purple to-neon-pink rounded-full"></span>
+        Map Ratings
+      </h3>
       <div style={{ height: Math.max(160, maps.length * 50) }}>
         <Bar data={data} options={options} />
       </div>

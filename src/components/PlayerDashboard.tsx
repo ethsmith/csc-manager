@@ -105,7 +105,7 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
         </button>
         <ModeToggle mode={mode} onChange={(m) => { onModeChange(m); setSelectedIdx(0); }} />
         <div className="flex-1 min-w-0">
-          <h1 className="text-3xl font-bold neon-glow truncate">{groupedPlayer.name}</h1>
+          <h1 className="text-3xl font-bold truncate gradient-text">{groupedPlayer.name}</h1>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             <span className={`text-sm px-3 py-0.5 rounded-full border ${
               mode === 'scrim'
@@ -144,8 +144,8 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
             </div>
           )}
         </div>
-        <div className="text-right">
-          <div className="text-xs uppercase tracking-wider text-slate-400">Final Rating</div>
+        <div className="text-right glass rounded-xl px-5 py-3 card-glow">
+          <div className="text-xs uppercase tracking-wider text-slate-400 mb-1">Final Rating</div>
           <div className={`text-4xl font-black ${ratingColor(player.finalRating)}`}>
             {player.finalRating.toFixed(3)}
           </div>
@@ -183,9 +183,10 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
       {/* Opening Duels & Clutch Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Opening Duels */}
-        <div className="glass rounded-xl p-6 card-glow">
+        <div className="glass rounded-xl p-6 card-glow group">
           <h3 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
-            <Zap size={18} /> Opening Duels
+            <span className="w-1.5 h-5 bg-gradient-to-b from-emerald-400 to-neon-blue rounded-full"></span>
+            <Zap size={18} className="opacity-80" /> Opening Duels
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -225,9 +226,10 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
         </div>
 
         {/* Clutch & Trading */}
-        <div className="glass rounded-xl p-6 card-glow">
+        <div className="glass rounded-xl p-6 card-glow group">
           <h3 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
-            <Award size={18} /> Clutch & Trading
+            <span className="w-1.5 h-5 bg-gradient-to-b from-neon-purple to-neon-pink rounded-full"></span>
+            <Award size={18} className="opacity-80" /> Clutch & Trading
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -260,9 +262,10 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
       {/* AWP & Utility Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* AWP Stats */}
-        <div className="glass rounded-xl p-6 card-glow">
+        <div className="glass rounded-xl p-6 card-glow group">
           <h3 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
-            <Eye size={18} /> AWP Stats
+            <span className="w-1.5 h-5 bg-gradient-to-b from-neon-blue to-neon-cyan rounded-full"></span>
+            <Eye size={18} className="opacity-80" /> AWP Stats
           </h3>
           {player.awpKills > 0 ? (
             <div className="grid grid-cols-2 gap-4">
@@ -291,9 +294,10 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
         </div>
 
         {/* Utility */}
-        <div className="glass rounded-xl p-6 card-glow">
+        <div className="glass rounded-xl p-6 card-glow group">
           <h3 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
-            <Shield size={18} /> Utility Usage
+            <span className="w-1.5 h-5 bg-gradient-to-b from-yellow-400 to-orange-500 rounded-full"></span>
+            <Shield size={18} className="opacity-80" /> Utility Usage
           </h3>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -320,9 +324,10 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
       </div>
 
       {/* Pistol Round Stats */}
-      <div className="glass rounded-xl p-6 card-glow">
+      <div className="glass rounded-xl p-6 card-glow group">
         <h3 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
-          <Target size={18} /> Pistol Rounds
+          <span className="w-1.5 h-5 bg-gradient-to-b from-neon-cyan to-emerald-400 rounded-full"></span>
+          <Target size={18} className="opacity-80" /> Pistol Rounds
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           <div>

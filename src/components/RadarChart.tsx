@@ -97,8 +97,11 @@ export default function PerformanceRadar({ player, allPlayers }: Props) {
   };
 
   return (
-    <div className="glass rounded-xl p-6 card-glow">
-      <h3 className="text-lg font-semibold text-neon-blue mb-4">Performance Radar (Percentile)</h3>
+    <div className="glass rounded-xl p-6 card-glow group">
+      <h3 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
+        <span className="w-1.5 h-5 bg-gradient-to-b from-neon-blue to-neon-purple rounded-full"></span>
+        Performance Radar (Percentile)
+      </h3>
       <div className="h-80">
         <Radar data={data} options={options} />
       </div>

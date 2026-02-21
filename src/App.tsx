@@ -27,10 +27,13 @@ function App() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 size={48} className="animate-spin text-neon-blue mx-auto" />
-          <p className="text-slate-400 text-lg">Loading player stats...</p>
-          <p className="text-slate-600 text-sm">Fetching data from Google Sheets</p>
+        <div className="text-center space-y-4 animate-in">
+          <div className="relative">
+            <div className="absolute inset-0 rounded-full bg-neon-blue/20 blur-xl animate-pulse" />
+            <Loader2 size={56} className="animate-spin text-neon-blue mx-auto relative" />
+          </div>
+          <p className="text-slate-300 text-lg font-medium gradient-text">Loading player stats...</p>
+          <p className="text-slate-500 text-sm">Fetching data from Google Sheets</p>
         </div>
       </div>
     );
