@@ -1,11 +1,19 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Building2, Users, Trophy, ChevronDown, Star, TrendingUp, Target, Shield, Loader2, Crown } from 'lucide-react';
+import { Building2, Users, Trophy, ChevronDown, Star, TrendingUp, Target, Shield, Loader2, Crown, X, UserPlus, ArrowRightLeft, Crosshair, Zap, Eye, Award, Flame } from 'lucide-react';
 import type { GroupedPlayer, StatMode, PlayerStats } from '../types';
-import { fetchFranchises, fetchAllPlayers, getPlayerTypeLabel, getPlayerTypeColor, type Franchise, type CscPlayer, type FranchiseTeam } from '../fetchFranchises';
+import { fetchFranchises, fetchAllPlayers, getPlayerTypeLabel, getPlayerTypeColor, type Franchise, type CscPlayer, type FranchiseTeam, type FranchisePlayer } from '../fetchFranchises';
 import ModeToggle from './ModeToggle';
 
 interface Props {
   players: GroupedPlayer[];
+}
+
+interface RosterPlayer {
+  franchisePlayer: FranchisePlayer;
+  cscPlayer: CscPlayer | undefined;
+  groupedPlayer: GroupedPlayer | undefined;
+  stats: PlayerStats | null;
+  isCaptain: boolean;
 }
 
 function ratingColor(rating: number): string {
@@ -13,6 +21,15 @@ function ratingColor(rating: number): string {
   if (rating >= 1.0) return 'text-neon-blue';
   if (rating >= 0.8) return 'text-yellow-400';
   return 'text-red-400';
+}
+
+function kdRatio(kills: number, deaths: number): string {
+  if (deaths === 0) return kills.toFixed(2);
+  return (kills / deaths).toFixed(2);
+}
+
+function pct(val: number): string {
+  return `${(val * 100).toFixed(1)}%`;
 }
 
 export default function TeamDashboard({ players }: Props) {
@@ -25,6 +42,9 @@ export default function TeamDashboard({ players }: Props) {
   const [allCscPlayers, setAllCscPlayers] = useState<CscPlayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<RosterPlayer | null>(null);
+  const [showReplacementFinder, setShowReplacementFinder] = useState(false);
+  const [playerToReplace, setPlayerToReplace] = useState<RosterPlayer | null>(null);
 
   useEffect(() => {
     Promise.all([fetchFranchises(), fetchAllPlayers()])
@@ -102,6 +122,43 @@ export default function TeamDashboard({ players }: Props) {
       mmrCap: selectedTeam?.tier.mmrCap ?? 0,
     };
   }, [teamRosterWithStats, selectedTeam]);
+
+  // Find replacement candidates for a player
+  const replacementCandidates = useMemo(() => {
+    if (!playerToReplace || !selectedTeam) return [];
+
+    const currentTeamMmr = teamRosterWithStats.reduce((sum, p) => sum + p.franchisePlayer.mmr, 0);
+    const mmrWithoutPlayer = currentTeamMmr - playerToReplace.franchisePlayer.mmr;
+    const maxReplacementMmr = selectedTeam.tier.mmrCap - mmrWithoutPlayer;
+
+    // Get all FA/DE/PFA players that fit within MMR and are in the same tier
+    const candidates = allCscPlayers
+      .filter((p) => 
+        ['FREE_AGENT', 'DRAFT_ELIGIBLE', 'PERMANENT_FREE_AGENT'].includes(p.type) &&
+        p.mmr <= maxReplacementMmr &&
+        p.tier?.name === selectedTeam.tier.name
+      )
+      .map((cscPlayer) => {
+        const groupedPlayer = players.find((gp) => gp.steamId === cscPlayer.steam64Id);
+        let stats: PlayerStats | null = null;
+        if (groupedPlayer) {
+          const entries = mode === 'regulation' ? groupedPlayer.regulation : groupedPlayer.scrim;
+          const entry = entries.find((e) => e.tier === selectedTeam.tier.name);
+          stats = entry?.stats ?? (entries.length > 0 ? entries[0].stats : null);
+        }
+        return { cscPlayer, groupedPlayer, stats };
+      })
+      .sort((a, b) => {
+        // Sort by rating (best first), then by MMR efficiency
+        if (a.stats && b.stats) return b.stats.finalRating - a.stats.finalRating;
+        if (a.stats) return -1;
+        if (b.stats) return 1;
+        return b.cscPlayer.mmr - a.cscPlayer.mmr;
+      })
+      .slice(0, 20); // Top 20 candidates
+
+    return candidates;
+  }, [playerToReplace, selectedTeam, teamRosterWithStats, allCscPlayers, players, mode]);
 
   if (loading) {
     return (
@@ -336,6 +393,192 @@ export default function TeamDashboard({ players }: Props) {
             )}
           </div>
 
+          {/* Team Analysis */}
+          {teamStats && teamRosterWithStats.filter(p => p.stats).length > 0 && (
+            <div className="glass rounded-xl p-6 card-glow">
+              <h2 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-5 bg-gradient-to-b from-yellow-400 to-orange-500 rounded-full"></span>
+                <TrendingUp size={18} className="opacity-80" />
+                Team Analysis
+              </h2>
+              
+              <div className="space-y-4">
+                {/* MMR Budget */}
+                {(() => {
+                  const totalMmr = teamRosterWithStats.reduce((sum, p) => sum + p.franchisePlayer.mmr, 0);
+                  const mmrRemaining = selectedTeam.tier.mmrCap - totalMmr;
+                  const mmrUsagePct = (totalMmr / selectedTeam.tier.mmrCap) * 100;
+                  return (
+                    <div className="bg-gradient-to-r from-neon-blue/10 to-transparent rounded-xl p-4 border border-neon-blue/20">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="text-sm font-semibold text-neon-blue">MMR Budget</div>
+                        <div className="text-sm">
+                          <span className="text-slate-400">Used: </span>
+                          <span className={`font-bold ${mmrUsagePct > 95 ? 'text-red-400' : mmrUsagePct > 80 ? 'text-yellow-400' : 'text-emerald-400'}`}>
+                            {totalMmr}
+                          </span>
+                          <span className="text-slate-500"> / {selectedTeam.tier.mmrCap}</span>
+                        </div>
+                      </div>
+                      <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all ${mmrUsagePct > 95 ? 'bg-red-500' : mmrUsagePct > 80 ? 'bg-yellow-500' : 'bg-emerald-500'}`}
+                          style={{ width: `${Math.min(mmrUsagePct, 100)}%` }}
+                        />
+                      </div>
+                      <div className="mt-2 text-sm">
+                        {mmrRemaining > 0 ? (
+                          <span className="text-emerald-400">{mmrRemaining} MMR available for upgrades</span>
+                        ) : (
+                          <span className="text-red-400">At MMR cap - must cut MMR to make changes</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Performance Issues */}
+                {(() => {
+                  const playersWithStats = teamRosterWithStats.filter(p => p.stats && p.stats.games >= 3);
+                  const underperformers = playersWithStats.filter(p => p.stats!.finalRating < 0.9);
+                  const lowKast = playersWithStats.filter(p => p.stats!.kast < 0.65);
+                  const negativeKd = playersWithStats.filter(p => p.stats!.kills / p.stats!.deaths < 0.85);
+                  
+                  const issues: { player: string; issue: string; severity: 'warning' | 'critical' }[] = [];
+                  
+                  underperformers.forEach(p => {
+                    issues.push({
+                      player: p.franchisePlayer.name,
+                      issue: `Low rating (${p.stats!.finalRating.toFixed(2)})`,
+                      severity: p.stats!.finalRating < 0.8 ? 'critical' : 'warning'
+                    });
+                  });
+                  
+                  lowKast.forEach(p => {
+                    if (!underperformers.includes(p)) {
+                      issues.push({
+                        player: p.franchisePlayer.name,
+                        issue: `Low KAST (${(p.stats!.kast * 100).toFixed(0)}%)`,
+                        severity: p.stats!.kast < 0.55 ? 'critical' : 'warning'
+                      });
+                    }
+                  });
+
+                  negativeKd.forEach(p => {
+                    if (!underperformers.includes(p) && !lowKast.includes(p)) {
+                      issues.push({
+                        player: p.franchisePlayer.name,
+                        issue: `Negative K/D (${(p.stats!.kills / p.stats!.deaths).toFixed(2)})`,
+                        severity: 'warning'
+                      });
+                    }
+                  });
+
+                  if (issues.length === 0) {
+                    return (
+                      <div className="bg-gradient-to-r from-emerald-500/10 to-transparent rounded-xl p-4 border border-emerald-500/20">
+                        <div className="flex items-center gap-2 text-emerald-400">
+                          <Star size={16} />
+                          <span className="font-semibold">All players performing well</span>
+                        </div>
+                        <p className="text-sm text-slate-400 mt-1">No significant performance concerns detected.</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="bg-gradient-to-r from-red-500/10 to-transparent rounded-xl p-4 border border-red-500/20">
+                      <div className="flex items-center gap-2 text-red-400 mb-3">
+                        <Target size={16} />
+                        <span className="font-semibold">Performance Concerns ({issues.length})</span>
+                      </div>
+                      <div className="space-y-2">
+                        {issues.slice(0, 4).map((issue, i) => (
+                          <div key={i} className="flex items-center justify-between text-sm">
+                            <span className="text-slate-300">{issue.player}</span>
+                            <span className={issue.severity === 'critical' ? 'text-red-400' : 'text-yellow-400'}>
+                              {issue.issue}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Roster Composition */}
+                {(() => {
+                  const playersWithStats = teamRosterWithStats.filter(p => p.stats);
+                  const avgRating = playersWithStats.length > 0 
+                    ? playersWithStats.reduce((sum, p) => sum + p.stats!.finalRating, 0) / playersWithStats.length 
+                    : 0;
+                  const ratingSpread = playersWithStats.length > 1
+                    ? Math.max(...playersWithStats.map(p => p.stats!.finalRating)) - Math.min(...playersWithStats.map(p => p.stats!.finalRating))
+                    : 0;
+                  const mmrEfficiency = playersWithStats.length > 0
+                    ? avgRating / (teamRosterWithStats.reduce((sum, p) => sum + p.franchisePlayer.mmr, 0) / playersWithStats.length) * 1000
+                    : 0;
+
+                  return (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="bg-slate-800/50 rounded-xl p-4 text-center">
+                        <div className="text-xs text-slate-400 uppercase mb-1">Team Avg Rating</div>
+                        <div className={`text-2xl font-bold ${ratingColor(avgRating)}`}>
+                          {avgRating.toFixed(3)}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          {avgRating >= 1.1 ? 'Excellent' : avgRating >= 1.0 ? 'Good' : avgRating >= 0.9 ? 'Average' : 'Needs work'}
+                        </div>
+                      </div>
+                      <div className="bg-slate-800/50 rounded-xl p-4 text-center">
+                        <div className="text-xs text-slate-400 uppercase mb-1">Rating Spread</div>
+                        <div className={`text-2xl font-bold ${ratingSpread > 0.3 ? 'text-yellow-400' : 'text-emerald-400'}`}>
+                          {ratingSpread.toFixed(3)}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          {ratingSpread > 0.4 ? 'Unbalanced' : ratingSpread > 0.25 ? 'Moderate' : 'Well balanced'}
+                        </div>
+                      </div>
+                      <div className="bg-slate-800/50 rounded-xl p-4 text-center">
+                        <div className="text-xs text-slate-400 uppercase mb-1">MMR Efficiency</div>
+                        <div className={`text-2xl font-bold ${mmrEfficiency > 2.8 ? 'text-emerald-400' : mmrEfficiency > 2.4 ? 'text-neon-blue' : 'text-yellow-400'}`}>
+                          {mmrEfficiency.toFixed(2)}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          Rating per 1K MMR
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Quick Actions */}
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {(() => {
+                    const totalMmr = teamRosterWithStats.reduce((sum, p) => sum + p.franchisePlayer.mmr, 0);
+                    const mmrRemaining = selectedTeam.tier.mmrCap - totalMmr;
+                    const playersWithStats = teamRosterWithStats.filter(p => p.stats);
+                    const worstPlayer = playersWithStats.sort((a, b) => a.stats!.finalRating - b.stats!.finalRating)[0];
+                    
+                    return worstPlayer ? (
+                      <button
+                        onClick={() => {
+                          setPlayerToReplace(worstPlayer);
+                          setShowReplacementFinder(true);
+                        }}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-neon-cyan/10 text-neon-cyan text-sm hover:bg-neon-cyan/20 transition-colors border border-neon-cyan/20"
+                      >
+                        <ArrowRightLeft size={14} />
+                        Find upgrade for {worstPlayer.franchisePlayer.name}
+                        {mmrRemaining > 0 && <span className="text-xs opacity-70">(+{mmrRemaining} MMR available)</span>}
+                      </button>
+                    ) : null;
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Team Roster */}
           <div className="glass rounded-xl p-6 card-glow">
             <h2 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
@@ -356,15 +599,17 @@ export default function TeamDashboard({ players }: Props) {
                     <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">K/D/A</th>
                     <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">ADR</th>
                     <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">KAST</th>
+                    <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {teamRosterWithStats.map((player, i) => (
                     <tr
                       key={player.franchisePlayer.steam64Id}
-                      className={`border-b border-white/5 table-row-hover ${
+                      className={`border-b border-white/5 table-row-hover cursor-pointer ${
                         i % 2 === 0 ? 'bg-white/[0.02]' : 'bg-transparent'
                       }`}
+                      onClick={() => setSelectedPlayer(player)}
                     >
                       <td className="px-4 py-3 font-medium text-slate-200 whitespace-nowrap">
                         <div className="flex items-center gap-3">
@@ -406,6 +651,19 @@ export default function TeamDashboard({ players }: Props) {
                       <td className="px-4 py-3 text-slate-300">
                         {player.stats ? `${(player.stats.kast * 100).toFixed(1)}%` : '-'}
                       </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPlayerToReplace(player);
+                            setShowReplacementFinder(true);
+                          }}
+                          className="p-1.5 rounded-lg bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20 transition-colors"
+                          title="Find replacements"
+                        >
+                          <ArrowRightLeft size={16} />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -434,7 +692,7 @@ export default function TeamDashboard({ players }: Props) {
       )}
 
       {/* Free Agents Summary */}
-      {freeAgents.length > 0 && (
+      {freeAgents.length > 0 && !selectedTeam && (
         <div className="glass rounded-xl p-6 card-glow">
           <h2 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
             <span className="w-1.5 h-5 bg-gradient-to-b from-neon-cyan to-emerald-400 rounded-full"></span>
@@ -464,6 +722,372 @@ export default function TeamDashboard({ players }: Props) {
                 {freeAgents.length}
               </div>
               <div className="text-xs text-slate-400 uppercase tracking-wider">Total Available</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Player Profile Modal */}
+      {selectedPlayer && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setSelectedPlayer(null)}>
+          <div className="glass rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto card-glow" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-neon-purple/30 to-neon-pink/30 flex items-center justify-center text-2xl font-bold text-neon-purple border-2 border-neon-purple/30">
+                  {selectedPlayer.franchisePlayer.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold gradient-text">{selectedPlayer.franchisePlayer.name}</h2>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-slate-400">{selectedTeam?.name}</span>
+                    {selectedPlayer.isCaptain && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                        ⭐ Captain
+                      </span>
+                    )}
+                    {selectedPlayer.cscPlayer && (
+                      <span className={`text-xs px-2 py-1 rounded-full border ${getPlayerTypeColor(selectedPlayer.cscPlayer.type)}`}>
+                        {getPlayerTypeLabel(selectedPlayer.cscPlayer.type)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setSelectedPlayer(null)} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                <X size={24} className="text-slate-400" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Key Stats */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="glass rounded-xl p-4 text-center">
+                  <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">MMR</div>
+                  <div className="text-2xl font-bold text-neon-cyan">{selectedPlayer.franchisePlayer.mmr}</div>
+                </div>
+                <div className="glass rounded-xl p-4 text-center">
+                  <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">Rating</div>
+                  <div className={`text-2xl font-bold ${selectedPlayer.stats ? ratingColor(selectedPlayer.stats.finalRating) : 'text-slate-500'}`}>
+                    {selectedPlayer.stats?.finalRating.toFixed(3) ?? '-'}
+                  </div>
+                </div>
+                <div className="glass rounded-xl p-4 text-center">
+                  <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">Games</div>
+                  <div className="text-2xl font-bold text-neon-purple">{selectedPlayer.stats?.games ?? '-'}</div>
+                </div>
+                <div className="glass rounded-xl p-4 text-center">
+                  <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">K/D</div>
+                  <div className={`text-2xl font-bold ${selectedPlayer.stats && selectedPlayer.stats.kills / selectedPlayer.stats.deaths >= 1 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {selectedPlayer.stats ? kdRatio(selectedPlayer.stats.kills, selectedPlayer.stats.deaths) : '-'}
+                  </div>
+                </div>
+              </div>
+
+              {selectedPlayer.stats && (
+                <>
+                  {/* Combat Stats */}
+                  <div className="glass rounded-xl p-5">
+                    <h3 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
+                      <Crosshair size={18} /> Combat Stats
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">Kills</div>
+                        <div className="text-xl font-bold text-emerald-400">{selectedPlayer.stats.kills}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">Deaths</div>
+                        <div className="text-xl font-bold text-red-400">{selectedPlayer.stats.deaths}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">Assists</div>
+                        <div className="text-xl font-bold text-neon-blue">{selectedPlayer.stats.assists}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">ADR</div>
+                        <div className="text-xl font-bold text-neon-cyan">{selectedPlayer.stats.adr.toFixed(1)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">Headshot %</div>
+                        <div className="text-xl font-bold text-yellow-400">{pct(selectedPlayer.stats.headshotPct)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">KAST</div>
+                        <div className="text-xl font-bold text-neon-purple">{pct(selectedPlayer.stats.kast)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">Impact</div>
+                        <div className="text-xl font-bold text-neon-blue">{selectedPlayer.stats.roundImpact?.toFixed(2) ?? '-'}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">Rounds</div>
+                        <div className="text-xl font-bold text-slate-300">{selectedPlayer.stats.roundsPlayed}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Opening Duels */}
+                  <div className="glass rounded-xl p-5">
+                    <h3 className="text-lg font-semibold text-emerald-400 mb-4 flex items-center gap-2">
+                      <Zap size={18} /> Opening Duels
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">Opening Kills</div>
+                        <div className="text-xl font-bold text-emerald-400">{selectedPlayer.stats.openingKills}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">Opening Deaths</div>
+                        <div className="text-xl font-bold text-red-400">{selectedPlayer.stats.openingDeaths}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">Opening Win %</div>
+                        <div className="text-xl font-bold text-neon-cyan">
+                          {selectedPlayer.stats.openingKills + selectedPlayer.stats.openingDeaths > 0
+                            ? pct(selectedPlayer.stats.openingKills / (selectedPlayer.stats.openingKills + selectedPlayer.stats.openingDeaths))
+                            : '-'}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">Trade Kills</div>
+                        <div className="text-xl font-bold text-neon-blue">{selectedPlayer.stats.tradeKills}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Clutches & Multi-kills */}
+                  <div className="glass rounded-xl p-5">
+                    <h3 className="text-lg font-semibold text-yellow-400 mb-4 flex items-center gap-2">
+                      <Award size={18} /> Clutches & Multi-kills
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">Clutch Rounds</div>
+                        <div className="text-xl font-bold text-slate-300">{selectedPlayer.stats.clutchRounds}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">Clutch Wins</div>
+                        <div className="text-xl font-bold text-emerald-400">{selectedPlayer.stats.clutchWins}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">1v1 Win Rate</div>
+                        <div className="text-xl font-bold text-neon-blue">{pct(selectedPlayer.stats.clutch1v1WinPct)}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">1v1 Wins</div>
+                        <div className="text-xl font-bold text-yellow-400">{selectedPlayer.stats.clutch1v1Wins}</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 pt-4 border-t border-white/10">
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">2K</div>
+                        <div className="text-xl font-bold text-slate-300">{selectedPlayer.stats.twoK}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">3K</div>
+                        <div className="text-xl font-bold text-neon-blue">{selectedPlayer.stats.threeK}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">4K</div>
+                        <div className="text-xl font-bold text-neon-purple">{selectedPlayer.stats.fourK}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-slate-400 uppercase">5K (Ace)</div>
+                        <div className="text-xl font-bold text-yellow-400">{selectedPlayer.stats.fiveK}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* AWP & Utility */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="glass rounded-xl p-5">
+                      <h3 className="text-lg font-semibold text-neon-cyan mb-4 flex items-center gap-2">
+                        <Eye size={18} /> AWP Stats
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-xs text-slate-400 uppercase">AWP Kills</div>
+                          <div className="text-xl font-bold text-neon-cyan">{selectedPlayer.stats.awpKills}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-400 uppercase">AWP K/R</div>
+                          <div className="text-xl font-bold text-neon-blue">
+                            {selectedPlayer.stats.awpKillsPerRound?.toFixed(3) ?? '-'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="glass rounded-xl p-5">
+                      <h3 className="text-lg font-semibold text-orange-400 mb-4 flex items-center gap-2">
+                        <Flame size={18} /> Utility
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <div className="text-xs text-slate-400 uppercase">Util Damage</div>
+                          <div className="text-xl font-bold text-orange-400">{selectedPlayer.stats.utilityDamage}</div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-slate-400 uppercase">Flash Assists</div>
+                          <div className="text-xl font-bold text-yellow-400">{selectedPlayer.stats.flashAssists}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {!selectedPlayer.stats && (
+                <div className="text-center py-8 text-slate-500">
+                  <Target size={48} className="mx-auto mb-4 opacity-50" />
+                  <p>No stats available for this player in {mode} mode.</p>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-4 border-t border-white/10">
+                <button
+                  onClick={() => {
+                    setPlayerToReplace(selectedPlayer);
+                    setShowReplacementFinder(true);
+                    setSelectedPlayer(null);
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-neon-cyan/15 text-neon-cyan border border-neon-cyan/30 hover:bg-neon-cyan/25 transition-colors"
+                >
+                  <ArrowRightLeft size={18} />
+                  Find Replacements
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Replacement Finder Modal */}
+      {showReplacementFinder && playerToReplace && selectedTeam && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { setShowReplacementFinder(false); setPlayerToReplace(null); }}>
+          <div className="glass rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto card-glow" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-white/10 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold gradient-text flex items-center gap-3">
+                  <UserPlus size={28} />
+                  Replacement Finder
+                </h2>
+                <p className="text-slate-400 mt-1">
+                  Finding replacements for <span className="text-neon-purple font-semibold">{playerToReplace.franchisePlayer.name}</span> ({playerToReplace.franchisePlayer.mmr} MMR)
+                </p>
+              </div>
+              <button onClick={() => { setShowReplacementFinder(false); setPlayerToReplace(null); }} className="p-2 rounded-lg hover:bg-white/10 transition-colors">
+                <X size={24} className="text-slate-400" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {/* MMR Budget Info */}
+              <div className="glass rounded-xl p-4 mb-6">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                  <div>
+                    <div className="text-xs text-slate-400 uppercase">Current Team MMR</div>
+                    <div className="text-xl font-bold text-neon-blue">
+                      {teamRosterWithStats.reduce((sum, p) => sum + p.franchisePlayer.mmr, 0)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-400 uppercase">MMR Cap</div>
+                    <div className="text-xl font-bold text-neon-purple">{selectedTeam.tier.mmrCap}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-400 uppercase">Player's MMR</div>
+                    <div className="text-xl font-bold text-red-400">{playerToReplace.franchisePlayer.mmr}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-slate-400 uppercase">Max Replacement MMR</div>
+                    <div className="text-xl font-bold text-emerald-400">
+                      {selectedTeam.tier.mmrCap - (teamRosterWithStats.reduce((sum, p) => sum + p.franchisePlayer.mmr, 0) - playerToReplace.franchisePlayer.mmr)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Candidates List */}
+              {replacementCandidates.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-neon-blue/10">
+                        <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">Player</th>
+                        <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">MMR</th>
+                        <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">Status</th>
+                        <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">Games</th>
+                        <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">Rating</th>
+                        <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">ADR</th>
+                        <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">KAST</th>
+                        <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">K/D</th>
+                        <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400">vs Current</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {replacementCandidates.map((candidate, i) => {
+                        const ratingDiff = candidate.stats && playerToReplace.stats
+                          ? candidate.stats.finalRating - playerToReplace.stats.finalRating
+                          : null;
+                        return (
+                          <tr
+                            key={candidate.cscPlayer.steam64Id}
+                            className={`border-b border-white/5 table-row-hover ${
+                              i % 2 === 0 ? 'bg-white/[0.02]' : 'bg-transparent'
+                            }`}
+                          >
+                            <td className="px-4 py-3 font-medium text-slate-200 whitespace-nowrap">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-neon-cyan/30 to-emerald-400/30 flex items-center justify-center text-sm font-bold text-neon-cyan border border-neon-cyan/30">
+                                  {candidate.cscPlayer.name.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="font-semibold">{candidate.cscPlayer.name}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-slate-300 font-medium">{candidate.cscPlayer.mmr}</td>
+                            <td className="px-4 py-3">
+                              <span className={`text-xs px-2 py-1 rounded-full border ${getPlayerTypeColor(candidate.cscPlayer.type)}`}>
+                                {getPlayerTypeLabel(candidate.cscPlayer.type)}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-slate-300">{candidate.stats?.games ?? '-'}</td>
+                            <td className="px-4 py-3">
+                              {candidate.stats ? (
+                                <span className={`font-bold ${ratingColor(candidate.stats.finalRating)}`}>
+                                  {candidate.stats.finalRating.toFixed(3)}
+                                </span>
+                              ) : (
+                                <span className="text-slate-500">-</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-slate-300">{candidate.stats?.adr.toFixed(1) ?? '-'}</td>
+                            <td className="px-4 py-3 text-slate-300">{candidate.stats ? pct(candidate.stats.kast) : '-'}</td>
+                            <td className="px-4 py-3 text-slate-300">
+                              {candidate.stats ? kdRatio(candidate.stats.kills, candidate.stats.deaths) : '-'}
+                            </td>
+                            <td className="px-4 py-3">
+                              {ratingDiff !== null ? (
+                                <span className={`font-bold ${ratingDiff >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                  {ratingDiff >= 0 ? '+' : ''}{ratingDiff.toFixed(3)}
+                                </span>
+                              ) : (
+                                <span className="text-slate-500">-</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-slate-500">
+                  <Users size={48} className="mx-auto mb-4 opacity-50" />
+                  <p className="text-lg">No eligible replacements found</p>
+                  <p className="text-sm mt-2">No FA/DE/PFA players in {selectedTeam.tier.name} fit within the MMR budget.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
