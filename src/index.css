@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --color-neon-blue: #00d4ff;
+  --color-neon-cyan: #00fff2;
+  --color-neon-purple: #a855f7;
+  --color-neon-pink: #ec4899;
+  --color-dark-900: #0a0e1a;
+  --color-dark-800: #0f1629;
+  --color-dark-700: #151d35;
+  --color-dark-600: #1c2541;
+  --color-dark-500: #243052;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1c2541 #0a0e1a;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: #0a0e1a;
+  color: #e2e8f0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.neon-glow {
+  text-shadow: 0 0 7px #00d4ff, 0 0 10px #00d4ff, 0 0 21px #00d4ff, 0 0 42px #0077ff;
+}
+
+.neon-border {
+  box-shadow: 0 0 5px rgba(0, 212, 255, 0.3), inset 0 0 5px rgba(0, 212, 255, 0.1);
+}
+
+.neon-border-hover:hover {
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.5), inset 0 0 10px rgba(0, 212, 255, 0.15);
+}
+
+.card-glow {
+  box-shadow: 0 0 15px rgba(0, 212, 255, 0.08), 0 4px 30px rgba(0, 0, 0, 0.4);
+}
+
+.stat-bar {
+  background: linear-gradient(90deg, #00d4ff, #0077ff);
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.4);
+}
+
+.glass {
+  background: rgba(15, 22, 41, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 212, 255, 0.15);
+}
