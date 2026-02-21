@@ -1,16 +1,51 @@
 import { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import type { GroupedPlayer, StatMode } from './types';
 import { fetchPlayerStats } from './fetchData';
+import Navbar from './components/Navbar';
 import PlayerList from './components/PlayerList';
 import PlayerDashboard from './components/PlayerDashboard';
+import TeamDashboard from './components/TeamDashboard';
 import { Loader2 } from 'lucide-react';
+
+function PlayersPage({ players }: { players: GroupedPlayer[] }) {
+  const [selectedPlayer, setSelectedPlayer] = useState<GroupedPlayer | null>(null);
+  const [mode, setMode] = useState<StatMode>('regulation');
+
+  return (
+    <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">
+      {selectedPlayer ? (
+        <PlayerDashboard
+          groupedPlayer={selectedPlayer}
+          allGroupedPlayers={players}
+          mode={mode}
+          onModeChange={setMode}
+          onBack={() => setSelectedPlayer(null)}
+        />
+      ) : (
+        <PlayerList
+          players={players}
+          mode={mode}
+          onModeChange={setMode}
+          onSelect={setSelectedPlayer}
+        />
+      )}
+    </div>
+  );
+}
+
+function TeamPage({ players }: { players: GroupedPlayer[] }) {
+  return (
+    <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">
+      <TeamDashboard players={players} />
+    </div>
+  );
+}
 
 function App() {
   const [players, setPlayers] = useState<GroupedPlayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPlayer, setSelectedPlayer] = useState<GroupedPlayer | null>(null);
-  const [mode, setMode] = useState<StatMode>('regulation');
 
   useEffect(() => {
     fetchPlayerStats()
@@ -58,24 +93,17 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">
-      {selectedPlayer ? (
-        <PlayerDashboard
-          groupedPlayer={selectedPlayer}
-          allGroupedPlayers={players}
-          mode={mode}
-          onModeChange={setMode}
-          onBack={() => setSelectedPlayer(null)}
-        />
-      ) : (
-        <PlayerList
-          players={players}
-          mode={mode}
-          onModeChange={setMode}
-          onSelect={setSelectedPlayer}
-        />
-      )}
-    </div>
+    <BrowserRouter>
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <main className="flex-1">
+          <Routes>
+            <Route path="/" element={<PlayersPage players={players} />} />
+            <Route path="/team" element={<TeamPage players={players} />} />
+          </Routes>
+        </main>
+      </div>
+    </BrowserRouter>
   );
 }
 

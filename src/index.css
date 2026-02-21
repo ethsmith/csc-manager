@@ -101,6 +101,12 @@ body {
   transition: all 0.3s ease;
 }
 
+.dropdown-menu {
+  background: rgba(15, 22, 41, 0.98);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 212, 255, 0.2);
+}
+
 .glass:hover {
   border-color: rgba(0, 212, 255, 0.25);
 }
