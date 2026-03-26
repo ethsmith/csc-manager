@@ -4,6 +4,7 @@ import { Building2, Users, Trophy, ChevronDown, Star, TrendingUp, Target, Shield
 import type { GroupedPlayer, StatMode, PlayerStats } from '../types';
 import { fetchFranchises, fetchAllPlayers, getPlayerTypeLabel, getPlayerTypeColor, type Franchise, type CscPlayer, type FranchiseTeam, type FranchisePlayer } from '../fetchFranchises';
 import ModeToggle from './ModeToggle';
+import { statRanges, getStatColor, getRatingLabel } from '../statRanges';
 
 interface Props {
   players: GroupedPlayer[];
@@ -18,10 +19,7 @@ interface RosterPlayer {
 }
 
 function ratingColor(rating: number): string {
-  if (rating >= 1.2) return 'text-emerald-400';
-  if (rating >= 1.0) return 'text-neon-blue';
-  if (rating >= 0.8) return 'text-yellow-400';
-  return 'text-red-400';
+  return getStatColor(rating, statRanges.hltvRating);
 }
 
 function kdRatio(kills: number, deaths: number): string {
@@ -55,14 +53,14 @@ export default function TeamDashboard({ players }: Props) {
   useEffect(() => {
     Promise.all([fetchFranchises(), fetchAllPlayers()])
       .then(([franchiseData, playerData]) => {
-        setFranchises(franchiseData);
-        setAllCscPlayers(playerData);
+        setFranchises(franchiseData ?? []);
+        setAllCscPlayers(playerData ?? []);
         
         // Restore saved franchise selection from localStorage
         const savedFranchiseName = localStorage.getItem(STORAGE_KEY_FRANCHISE);
         const savedTeamName = localStorage.getItem(STORAGE_KEY_TEAM);
         
-        if (savedFranchiseName) {
+        if (savedFranchiseName && franchiseData) {
           const franchise = franchiseData.find(f => f.name === savedFranchiseName);
           if (franchise) {
             setSelectedFranchise(franchise);
@@ -273,7 +271,7 @@ export default function TeamDashboard({ players }: Props) {
             <ChevronDown size={20} className={`text-slate-400 transition-transform ${franchiseDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          {franchiseDropdownOpen && (
+          {franchiseDropdownOpen && franchises && franchises.length > 0 && (
             <div className="absolute top-full left-0 mt-2 w-full max-w-lg rounded-xl shadow-2xl max-h-80 overflow-y-auto dropdown-menu z-50">
               {franchises.map((franchise) => (
                 <button
@@ -434,7 +432,7 @@ export default function TeamDashboard({ players }: Props) {
                     <Target size={16} className="text-emerald-400 opacity-70" />
                     <span className="text-xs uppercase tracking-wider text-slate-400">Team K/D</span>
                   </div>
-                  <div className={`text-2xl font-bold ${teamStats.kdRatio >= 1 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <div className={`text-2xl font-bold ${getStatColor(teamStats.kdRatio, statRanges.kdRatio)}`}>
                     {teamStats.kdRatio.toFixed(2)}
                   </div>
                 </div>
@@ -463,7 +461,7 @@ export default function TeamDashboard({ players }: Props) {
                         <div className="text-sm font-semibold text-neon-blue">MMR Budget</div>
                         <div className="text-sm">
                           <span className="text-slate-400">Used: </span>
-                          <span className={`font-bold ${mmrUsagePct > 95 ? 'text-red-400' : mmrUsagePct > 80 ? 'text-yellow-400' : 'text-emerald-400'}`}>
+                          <span className={`font-bold ${getStatColor(mmrUsagePct, statRanges.mmrUsagePct)}`}>
                             {totalMmr}
                           </span>
                           <span className="text-slate-500"> / {selectedTeam.tier.mmrCap}</span>
@@ -576,12 +574,12 @@ export default function TeamDashboard({ players }: Props) {
                           {avgRating.toFixed(3)}
                         </div>
                         <div className="text-xs text-slate-500 mt-1">
-                          {avgRating >= 1.1 ? 'Excellent' : avgRating >= 1.0 ? 'Good' : avgRating >= 0.9 ? 'Average' : 'Needs work'}
+                          {getRatingLabel(avgRating)}
                         </div>
                       </div>
                       <div className="bg-slate-800/50 rounded-xl p-4 text-center">
                         <div className="text-xs text-slate-400 uppercase mb-1">Rating Spread</div>
-                        <div className={`text-2xl font-bold ${ratingSpread > 0.3 ? 'text-yellow-400' : 'text-emerald-400'}`}>
+                        <div className={`text-2xl font-bold ${getStatColor(ratingSpread, statRanges.ratingSpread)}`}>
                           {ratingSpread.toFixed(3)}
                         </div>
                         <div className="text-xs text-slate-500 mt-1">
@@ -590,7 +588,7 @@ export default function TeamDashboard({ players }: Props) {
                       </div>
                       <div className="bg-slate-800/50 rounded-xl p-4 text-center">
                         <div className="text-xs text-slate-400 uppercase mb-1">MMR Efficiency</div>
-                        <div className={`text-2xl font-bold ${mmrEfficiency > 2.8 ? 'text-emerald-400' : mmrEfficiency > 2.4 ? 'text-neon-blue' : 'text-yellow-400'}`}>
+                        <div className={`text-2xl font-bold ${getStatColor(mmrEfficiency, statRanges.mmrEfficiency)}`}>
                           {mmrEfficiency.toFixed(2)}
                         </div>
                         <div className="text-xs text-slate-500 mt-1">
@@ -728,7 +726,7 @@ export default function TeamDashboard({ players }: Props) {
           <Building2 size={48} className="text-slate-600 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-slate-400 mb-2">No Franchise Selected</h3>
           <p className="text-slate-500">Select a franchise above to view your teams.</p>
-          <p className="text-slate-600 text-sm mt-2">{franchises.length} franchises available</p>
+          <p className="text-slate-600 text-sm mt-2">{franchises?.length ?? 0} franchises available</p>
         </div>
       )}
 
@@ -826,7 +824,7 @@ export default function TeamDashboard({ players }: Props) {
                 </div>
                 <div className="glass rounded-xl p-4 text-center">
                   <div className="text-xs text-slate-400 uppercase tracking-wider mb-1">K/D</div>
-                  <div className={`text-2xl font-bold ${selectedPlayer.stats && selectedPlayer.stats.kills / selectedPlayer.stats.deaths >= 1 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <div className={`text-2xl font-bold ${selectedPlayer.stats ? getStatColor(selectedPlayer.stats.kills / selectedPlayer.stats.deaths, statRanges.kdRatio) : 'text-slate-400'}`}>
                     {selectedPlayer.stats ? kdRatio(selectedPlayer.stats.kills, selectedPlayer.stats.deaths) : '-'}
                   </div>
                 </div>
@@ -1126,7 +1124,7 @@ export default function TeamDashboard({ players }: Props) {
                             </td>
                             <td className="px-4 py-3">
                               {efficiency !== null ? (
-                                <span className={`font-bold ${efficiency > 3.0 ? 'text-emerald-400' : efficiency > 2.5 ? 'text-neon-cyan' : 'text-yellow-400'}`}>
+                                <span className={`font-bold ${getStatColor(efficiency, statRanges.mmrEfficiency)}`}>
                                   {efficiency.toFixed(2)}
                                 </span>
                               ) : (

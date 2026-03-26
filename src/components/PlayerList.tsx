@@ -1,7 +1,9 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Search, ChevronDown, ChevronUp, Users, Trophy, Filter, Plus, X, SlidersHorizontal } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, Users, Trophy, Filter, Plus, X, SlidersHorizontal, UserCheck } from 'lucide-react';
 import type { GroupedPlayer, StatMode, PlayerStats } from '../types';
+import { getPlayerTypeLabel, getPlayerTypeColor, type PlayerType } from '../fetchFranchises';
 import ModeToggle from './ModeToggle';
+import { statRanges, getStatColor } from '../statRanges';
 
 interface Props {
   players: GroupedPlayer[];
@@ -79,6 +81,8 @@ const STAT_FIELDS: StatFieldDef[] = [
   // Economy
   { key: 'ecoKillValue', label: 'Eco Kill Value', type: 'number', group: 'Economy' },
   { key: 'ecoDeathValue', label: 'Eco Death Value', type: 'number', group: 'Economy' },
+  { key: 'duelSwing', label: 'Duel Swing', type: 'number', group: 'Economy' },
+  { key: 'duelSwingPerRound', label: 'Duel Swing/Rd', type: 'number', group: 'Economy' },
   { key: 'econImpact', label: 'Econ Impact', type: 'number', group: 'Economy' },
   { key: 'roundImpact', label: 'Round Impact', type: 'number', group: 'Economy' },
   { key: 'probabilitySwing', label: 'Probability Swing', type: 'number', group: 'Economy' },
@@ -235,6 +239,14 @@ const STR_OPS: { value: StrOp; label: string }[] = [
 
 const FIELD_MAP = new Map(STAT_FIELDS.map((f) => [f.key, f]));
 
+// CSC Core tier ordering (lowest to highest)
+const CSC_TIER_ORDER = ['recruit', 'prospect', 'contender', 'challenger', 'elite', 'premier'];
+
+function getTierRank(tier: string): number {
+  const idx = CSC_TIER_ORDER.indexOf(tier.toLowerCase());
+  return idx === -1 ? CSC_TIER_ORDER.length : idx;
+}
+
 const TABLE_COLUMNS: { key: keyof PlayerStats | 'playerName'; label: string; sortable: boolean }[] = [
   { key: 'playerName', label: 'Player', sortable: true },
   { key: 'tier', label: 'Tier', sortable: true },
@@ -246,10 +258,7 @@ const TABLE_COLUMNS: { key: keyof PlayerStats | 'playerName'; label: string; sor
 ];
 
 function ratingColor(rating: number): string {
-  if (rating >= 1.2) return 'text-emerald-400';
-  if (rating >= 1.0) return 'text-neon-blue';
-  if (rating >= 0.8) return 'text-yellow-400';
-  return 'text-red-400';
+  return getStatColor(rating, statRanges.hltvRating);
 }
 
 function getBestEntry(gp: GroupedPlayer, mode: StatMode): PlayerStats | null {
@@ -306,6 +315,8 @@ export default function PlayerList({ players, mode, onModeChange, onSelect }: Pr
   const [sortKey, setSortKey] = useState<SortKey>('finalRating');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [tierFilter, setTierFilter] = useState<string>('all');
+  const [cscTierFilter, setCscTierFilter] = useState<string>('all');
+  const [playerTypeFilter, setPlayerTypeFilter] = useState<string>('all');
   const [filters, setFilters] = useState<StatFilter[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -351,8 +362,28 @@ export default function PlayerList({ players, mode, onModeChange, onSelect }: Pr
     playersWithStats.forEach(({ gp }) => {
       getTiers(gp, mode).forEach((t) => set.add(t));
     });
-    return ['all', ...Array.from(set).sort()];
+    const tierArray = Array.from(set).sort();
+    return ['all', ...tierArray];
   }, [playersWithStats, mode]);
+
+  const cscTiers = useMemo(() => {
+    const set = new Set<string>();
+    playersWithStats.forEach(({ gp }) => {
+      if (gp.cscTier) set.add(gp.cscTier);
+    });
+    // Sort by CSC tier order (lowest to highest)
+    const tierArray = Array.from(set);
+    tierArray.sort((a, b) => getTierRank(a) - getTierRank(b));
+    return ['all', ...tierArray];
+  }, [playersWithStats]);
+
+  const playerTypes = useMemo(() => {
+    const set = new Set<string>();
+    playersWithStats.forEach(({ gp }) => {
+      if (gp.cscPlayerType) set.add(gp.cscPlayerType);
+    });
+    return ['all', ...Array.from(set).sort()];
+  }, [playersWithStats]);
 
   const filtered = useMemo(() => {
     let result = [...playersWithStats];
@@ -360,6 +391,20 @@ export default function PlayerList({ players, mode, onModeChange, onSelect }: Pr
     if (tierFilter !== 'all') {
       result = result.filter(({ gp }) =>
         getTiers(gp, mode).includes(tierFilter)
+      );
+    }
+
+    // Apply CSC tier filter (only in regulation mode)
+    if (mode === 'regulation' && cscTierFilter !== 'all') {
+      result = result.filter(({ gp }) =>
+        gp.cscTier?.toLowerCase() === cscTierFilter.toLowerCase()
+      );
+    }
+
+    // Apply player type filter (only in regulation mode)
+    if (mode === 'regulation' && playerTypeFilter !== 'all') {
+      result = result.filter(({ gp }) =>
+        gp.cscPlayerType === playerTypeFilter
       );
     }
 
@@ -393,7 +438,7 @@ export default function PlayerList({ players, mode, onModeChange, onSelect }: Pr
     });
 
     return result;
-  }, [playersWithStats, search, sortKey, sortDir, tierFilter, mode, filters]);
+  }, [playersWithStats, search, sortKey, sortDir, tierFilter, cscTierFilter, playerTypeFilter, mode, filters]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -437,7 +482,7 @@ export default function PlayerList({ players, mode, onModeChange, onSelect }: Pr
           <span className="gradient-text">FRAGG 3.0 Stats</span>
         </h1>
         <div className="flex items-center gap-3 ml-auto">
-          <ModeToggle mode={mode} onChange={(m) => { setTierFilter('all'); onModeChange(m); }} />
+          <ModeToggle mode={mode} onChange={(m) => { setTierFilter('all'); setCscTierFilter('all'); setPlayerTypeFilter('all'); onModeChange(m); }} />
           <div className="flex items-center gap-2 text-sm text-slate-400">
             <Users size={16} />
             {filtered.length} player{filtered.length !== 1 ? 's' : ''}
@@ -457,6 +502,32 @@ export default function PlayerList({ players, mode, onModeChange, onSelect }: Pr
             className="w-full pl-10 pr-4 py-3 rounded-xl glass text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-neon-blue/40 transition-all neon-border-hover"
           />
         </div>
+        {mode === 'regulation' && cscTiers.length > 1 && (
+          <select
+            value={cscTierFilter}
+            onChange={(e) => setCscTierFilter(e.target.value)}
+            className="glass rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon-blue/40 cursor-pointer neon-border-hover appearance-none min-w-[160px]"
+          >
+            {cscTiers.map((t) => (
+              <option key={t} value={t} className="bg-dark-800">
+                {t === 'all' ? '🎯 All CSC Tiers' : t}
+              </option>
+            ))}
+          </select>
+        )}
+        {mode === 'regulation' && playerTypes.length > 1 && (
+          <select
+            value={playerTypeFilter}
+            onChange={(e) => setPlayerTypeFilter(e.target.value)}
+            className="glass rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon-blue/40 cursor-pointer neon-border-hover appearance-none min-w-[160px]"
+          >
+            {playerTypes.map((t) => (
+              <option key={t} value={t} className="bg-dark-800">
+                {t === 'all' ? '👤 All Statuses' : getPlayerTypeLabel(t as PlayerType)}
+              </option>
+            ))}
+          </select>
+        )}
         <select
           value={tierFilter}
           onChange={(e) => setTierFilter(e.target.value)}
@@ -464,7 +535,7 @@ export default function PlayerList({ players, mode, onModeChange, onSelect }: Pr
         >
           {tiers.map((t) => (
             <option key={t} value={t} className="bg-dark-800">
-              {t === 'all' ? '🏆 All Tiers' : t}
+              {t === 'all' ? '🏆 All Teams' : t}
             </option>
           ))}
         </select>
@@ -643,6 +714,11 @@ export default function PlayerList({ players, mode, onModeChange, onSelect }: Pr
                         {gp.name.charAt(0).toUpperCase()}
                       </div>
                       <span className="font-semibold">{gp.name}</span>
+                      {mode === 'regulation' && gp.cscPlayerType && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${getPlayerTypeColor(gp.cscPlayerType as PlayerType)}`}>
+                          {getPlayerTypeLabel(gp.cscPlayerType as PlayerType)}
+                        </span>
+                      )}
                     </div>
                   </td>
                   <td className="px-4 py-3">

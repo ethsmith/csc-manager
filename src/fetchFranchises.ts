@@ -87,17 +87,15 @@ function isCacheValid<T>(entry: CacheEntry<T> | null): entry is CacheEntry<T> {
 export async function fetchFranchises(): Promise<Franchise[]> {
   // Return cached data if valid
   if (isCacheValid(cache.franchises)) {
-    console.log('[Cache] Using cached franchises data');
     return cache.franchises.data;
   }
-
-  console.log('[Cache] Fetching fresh franchises data');
   const response = await fetch(CSC_GRAPHQL_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
+      operationName: 'franchises',
       query: `query franchises {
         franchises(active: true) {
           name
@@ -136,7 +134,7 @@ export async function fetchFranchises(): Promise<Franchise[]> {
   });
 
   const json = await response.json();
-  const data = json.data.franchises;
+  const data = json.data?.franchises ?? [];
   
   // Store in cache
   cache.franchises = { data, timestamp: Date.now() };
@@ -147,11 +145,8 @@ export async function fetchFranchises(): Promise<Franchise[]> {
 export async function fetchAllPlayers(): Promise<CscPlayer[]> {
   // Return cached data if valid
   if (isCacheValid(cache.players)) {
-    console.log('[Cache] Using cached players data');
     return cache.players.data;
   }
-
-  console.log('[Cache] Fetching fresh players data');
   const response = await fetch(CSC_GRAPHQL_ENDPOINT, {
     method: 'POST',
     headers: {
@@ -186,7 +181,7 @@ export async function fetchAllPlayers(): Promise<CscPlayer[]> {
   });
 
   const json = await response.json();
-  const data = json.data.players;
+  const data = json.data?.players ?? [];
   
   // Store in cache
   cache.players = { data, timestamp: Date.now() };
@@ -197,7 +192,6 @@ export async function fetchAllPlayers(): Promise<CscPlayer[]> {
 export function clearCache(): void {
   cache.franchises = null;
   cache.players = null;
-  console.log('[Cache] Cache cleared');
 }
 
 export function getPlayerTypeLabel(type: PlayerType): string {

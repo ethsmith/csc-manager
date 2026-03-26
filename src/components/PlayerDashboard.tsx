@@ -23,6 +23,8 @@ import KillDistribution from './KillDistribution';
 import SideComparison from './SideComparison';
 import MapRatings from './MapRatings';
 import ModeToggle from './ModeToggle';
+import HLTVRatingCards from './HLTVRatingCards';
+import { statRanges, getStatColor } from '../statRanges';
 
 interface StatItemProps {
   label: string;
@@ -72,10 +74,7 @@ interface Props {
 }
 
 function ratingColor(rating: number): string {
-  if (rating >= 1.2) return 'text-emerald-400';
-  if (rating >= 1.0) return 'text-neon-blue';
-  if (rating >= 0.8) return 'text-yellow-400';
-  return 'text-red-400';
+  return getStatColor(rating, statRanges.hltvRating);
 }
 
 function kdRatio(kills: number, deaths: number): string {
@@ -106,6 +105,15 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
     () => getAllStatsForMode(allGroupedPlayers, mode),
     [allGroupedPlayers, mode]
   );
+
+  // Get players in the same CSC tier for percentile calculations
+  const tierPlayers = useMemo(() => {
+    const playerTier = groupedPlayer.cscTier;
+    if (!playerTier) return allPlayers;
+    return allGroupedPlayers
+      .filter((gp) => gp.cscTier === playerTier)
+      .flatMap((gp) => getEntries(gp, mode).map((e) => e.stats));
+  }, [allGroupedPlayers, groupedPlayer.cscTier, mode]);
 
   if (!entry) {
     return (
@@ -198,18 +206,21 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
       {/* Core Stats Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
         <StatCard label="K / D / A" value={`${player.kills} / ${player.deaths} / ${player.assists}`} icon={<Crosshair size={16} />} />
-        <StatCard label="K/D Ratio" value={kdRatio(player.kills, player.deaths)} icon={<Target size={16} />} color={parseFloat(kdRatio(player.kills, player.deaths)) >= 1 ? 'text-emerald-400' : 'text-red-400'} />
-        <StatCard label="ADR" value={player.adr.toFixed(1)} icon={<Flame size={16} />} color={player.adr >= 80 ? 'text-emerald-400' : player.adr >= 60 ? 'text-neon-blue' : 'text-yellow-400'} />
-        <StatCard label="HLTV Rating" value={player.hltvRating.toFixed(3)} icon={<TrendingUp size={16} />} color={ratingColor(player.hltvRating + 0.5)} />
-        <StatCard label="KAST" value={pct(player.kast)} icon={<Shield size={16} />} color={player.kast >= 0.7 ? 'text-emerald-400' : 'text-neon-blue'} />
-        <StatCard label="Headshot %" value={pct(player.headshotPct)} icon={<Skull size={16} />} />
-        <StatCard label="KPR" value={player.kpr.toFixed(3)} icon={<Crosshair size={16} />} />
-        <StatCard label="DPR" value={player.dpr.toFixed(3)} icon={<Skull size={16} />} color="text-red-400" />
-        <StatCard label="Survival" value={pct(player.survival)} icon={<Heart size={16} />} color="text-emerald-400" />
+        <StatCard label="K/D Ratio" value={kdRatio(player.kills, player.deaths)} icon={<Target size={16} />} color={getStatColor(parseFloat(kdRatio(player.kills, player.deaths)), statRanges.kdRatio)} />
+        <StatCard label="ADR" value={player.adr.toFixed(1)} icon={<Flame size={16} />} color={getStatColor(player.adr, statRanges.adr)} />
+        <StatCard label="HLTV Rating" value={player.hltvRating.toFixed(3)} icon={<TrendingUp size={16} />} color={getStatColor(player.hltvRating, statRanges.hltvRating)} />
+        <StatCard label="KAST" value={pct(player.kast)} icon={<Shield size={16} />} color={getStatColor(player.kast, statRanges.kast)} />
+        <StatCard label="Headshot %" value={pct(player.headshotPct)} icon={<Skull size={16} />} color={getStatColor(player.headshotPct, statRanges.headshotPct)} />
+        <StatCard label="KPR" value={player.kpr.toFixed(3)} icon={<Crosshair size={16} />} color={getStatColor(player.kpr, statRanges.kpr)} />
+        <StatCard label="DPR" value={player.dpr.toFixed(3)} icon={<Skull size={16} />} color={getStatColor(player.dpr, statRanges.dpr)} />
+        <StatCard label="Survival" value={pct(player.survival)} icon={<Heart size={16} />} color={getStatColor(player.survival, statRanges.survival)} />
         <StatCard label="Avg TTK" value={`${player.avgTimeToKill.toFixed(2)}s`} icon={<Clock size={16} />} />
         <StatCard label="Damage/Kill" value={player.damagePerKill.toFixed(1)} icon={<Zap size={16} />} />
         <StatCard label="Time Alive/Rd" value={`${player.timeAlivePerRound.toFixed(1)}s`} icon={<Clock size={16} />} />
       </div>
+
+      {/* HLTV-Style Rating Cards */}
+      <HLTVRatingCards player={player} tierPlayers={tierPlayers} />
 
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -382,6 +393,8 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
       <StatSection title="Economy & Impact" icon={<DollarSign size={18} className="opacity-80" />} gradientFrom="from-yellow-400" gradientTo="to-emerald-400">
         <StatItem label="Eco Kill Value" value={player.ecoKillValue} color="text-emerald-400" />
         <StatItem label="Eco Death Value" value={player.ecoDeathValue} color="text-red-400" />
+        <StatItem label="Duel Swing" value={player.duelSwing.toFixed(3)} color="text-neon-cyan" />
+        <StatItem label="Duel Swing/Rd" value={player.duelSwingPerRound.toFixed(4)} color={getStatColor(player.duelSwingPerRound, statRanges.duelSwingPerRound)} />
         <StatItem label="Econ Impact" value={player.econImpact.toFixed(1)} color="text-neon-blue" />
         <StatItem label="Round Impact" value={player.roundImpact.toFixed(3)} color="text-neon-cyan" />
         <StatItem label="Probability Swing" value={player.probabilitySwing.toFixed(3)} color="text-neon-purple" />

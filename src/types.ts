@@ -8,6 +8,8 @@ export interface StatEntry {
 export interface GroupedPlayer {
   steamId: string;
   name: string;
+  cscTier: string | null;
+  cscPlayerType: string | null;
   regulation: StatEntry[];
   scrim: StatEntry[];
 }
@@ -46,6 +48,8 @@ export interface PlayerStats {
   winPctAfterOpeningKill: number;
   ecoKillValue: number;
   ecoDeathValue: number;
+  duelSwing: number;
+  duelSwingPerRound: number;
   econImpact: number;
   roundImpact: number;
   probabilitySwing: number;

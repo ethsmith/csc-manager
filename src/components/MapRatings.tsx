@@ -7,6 +7,7 @@ import {
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import type { PlayerStats } from '../types';
+import { statRanges } from '../statRanges';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
@@ -44,14 +45,14 @@ export default function MapRatings({ player }: Props) {
         label: 'Rating',
         data: maps.map((m) => m.rating),
         backgroundColor: maps.map((m) =>
-          m.rating >= 1.0
-            ? 'rgba(0, 212, 255, 0.7)'
-            : m.rating >= 0.8
-              ? 'rgba(168, 85, 247, 0.6)'
-              : 'rgba(236, 72, 153, 0.6)'
+          m.rating >= statRanges.mapRating.good
+            ? 'rgba(52, 211, 153, 0.7)'
+            : m.rating >= statRanges.mapRating.average
+              ? 'rgba(0, 212, 255, 0.7)'
+              : 'rgba(248, 113, 113, 0.6)'
         ),
         borderColor: maps.map((m) =>
-          m.rating >= 1.0 ? '#00d4ff' : m.rating >= 0.8 ? '#a855f7' : '#ec4899'
+          m.rating >= statRanges.mapRating.good ? '#34d399' : m.rating >= statRanges.mapRating.average ? '#00d4ff' : '#f87171'
         ),
         borderWidth: 1,
         borderRadius: 6,

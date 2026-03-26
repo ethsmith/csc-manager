@@ -1,64 +1,89 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useParams, useNavigate } from 'react-router-dom';
 import type { GroupedPlayer, StatMode } from './types';
 import { fetchPlayerStats } from './fetchData';
 import Navbar from './components/Navbar';
 import PlayerList from './components/PlayerList';
 import PlayerDashboard from './components/PlayerDashboard';
 import TeamDashboard from './components/TeamDashboard';
+import DevStatAverages from './components/DevStatAverages';
+import Leaderboard from './components/Leaderboard';
 import { Loader2 } from 'lucide-react';
 
-interface LocationState {
-  selectedSteamId?: string;
-}
-
-function PlayersPage({ players }: { players: GroupedPlayer[] }) {
-  const location = useLocation();
-  const state = location.state as LocationState | null;
-  
-  const initialPlayer = state?.selectedSteamId 
-    ? players.find(p => p.steamId === state.selectedSteamId) ?? null
-    : null;
-  
-  const [selectedPlayer, setSelectedPlayer] = useState<GroupedPlayer | null>(initialPlayer);
+function PlayersListPage({ players }: { players: GroupedPlayer[] }) {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<StatMode>('regulation');
-  
-  useEffect(() => {
-    if (state?.selectedSteamId) {
-      const player = players.find(p => p.steamId === state.selectedSteamId);
-      if (player) {
-        setSelectedPlayer(player);
-      }
-      window.history.replaceState({}, document.title);
-    }
-  }, [state?.selectedSteamId, players]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">
-      {selectedPlayer ? (
-        <PlayerDashboard
-          groupedPlayer={selectedPlayer}
-          allGroupedPlayers={players}
-          mode={mode}
-          onModeChange={setMode}
-          onBack={() => setSelectedPlayer(null)}
-        />
-      ) : (
-        <PlayerList
-          players={players}
-          mode={mode}
-          onModeChange={setMode}
-          onSelect={setSelectedPlayer}
-        />
-      )}
+      <PlayerList
+        players={players}
+        mode={mode}
+        onModeChange={setMode}
+        onSelect={(player) => navigate(`/players/${player.steamId}`)}
+      />
     </div>
   );
 }
 
-function TeamPage({ players }: { players: GroupedPlayer[] }) {
+function PlayerDetailPage({ players }: { players: GroupedPlayer[] }) {
+  const { steamId } = useParams<{ steamId: string }>();
+  const navigate = useNavigate();
+  const [mode, setMode] = useState<StatMode>('regulation');
+
+  const player = players.find((p) => p.steamId === steamId);
+
+  if (!player) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">
+        <div className="glass rounded-xl p-8 card-glow text-center space-y-4">
+          <div className="text-4xl">🔍</div>
+          <h2 className="text-xl font-bold text-slate-200">Player not found</h2>
+          <p className="text-slate-400">No player with Steam ID: {steamId}</p>
+          <button
+            onClick={() => navigate('/players')}
+            className="px-6 py-2 rounded-lg bg-neon-blue/20 text-neon-blue border border-neon-blue/30 hover:bg-neon-blue/30 transition-colors cursor-pointer"
+          >
+            Back to Players
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">
+      <PlayerDashboard
+        groupedPlayer={player}
+        allGroupedPlayers={players}
+        mode={mode}
+        onModeChange={setMode}
+        onBack={() => navigate('/players')}
+      />
+    </div>
+  );
+}
+
+function TeamsPage({ players }: { players: GroupedPlayer[] }) {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">
       <TeamDashboard players={players} />
+    </div>
+  );
+}
+
+function DevPage({ players }: { players: GroupedPlayer[] }) {
+  return (
+    <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">
+      <DevStatAverages players={players} />
+    </div>
+  );
+}
+
+function LeaderboardPage({ players }: { players: GroupedPlayer[] }) {
+  return (
+    <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">
+      <Leaderboard players={players} />
     </div>
   );
 }
@@ -119,8 +144,12 @@ function App() {
         <Navbar />
         <main className="flex-1">
           <Routes>
-            <Route path="/" element={<PlayersPage players={players} />} />
-            <Route path="/team" element={<TeamPage players={players} />} />
+            <Route path="/" element={<PlayersListPage players={players} />} />
+            <Route path="/players" element={<PlayersListPage players={players} />} />
+            <Route path="/players/:steamId" element={<PlayerDetailPage players={players} />} />
+            <Route path="/teams" element={<TeamsPage players={players} />} />
+            <Route path="/leaderboard" element={<LeaderboardPage players={players} />} />
+            <Route path="/dev" element={<DevPage players={players} />} />
           </Routes>
         </main>
       </div>
