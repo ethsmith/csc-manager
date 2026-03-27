@@ -43,9 +43,13 @@ const statKeys: StatKey[] = [
   'ctRoundsPlayed', 'ctKills', 'ctDeaths', 'ctDamage', 'ctSurvivals', 'ctRoundsWithMultiKill',
   'ctEcoKillValue', 'ctKast', 'ctClutchRounds', 'ctClutchWins', 'ctManAdvantageKills',
   'ctManAdvantageKillsPct', 'ctManDisadvantageDeaths', 'ctManDisadvantageDeathsPct',
-  'ctRating', 'ctEcoRating', 'ancientRating', 'ancientGames', 'anubisRating', 'anubisGames',
-  'dust2Rating', 'dust2Games', 'infernoRating', 'infernoGames', 'mirageRating', 'mirageGames',
-  'nukeRating', 'nukeGames', 'overpassRating', 'overpassGames',
+  'ctRating', 'ctEcoRating', 'clutch1v2Attempts', 'clutch1v2Wins', 'clutch1v3Attempts',
+  'clutch1v3Wins', 'clutch1v4Attempts', 'clutch1v4Wins', 'clutch1v5Attempts', 'clutch1v5Wins',
+  'smokesThrown', 'hesThrown', 'molotovsThrown', 'totalNadesThrown', 'heDamage', 'fireDamage',
+  'damageTaken', 'avgTimeToDeath', 'tOpeningKills', 'tOpeningDeaths', 'ctOpeningKills',
+  'ctOpeningDeaths', 'enemiesFlashed', 'ancientRating', 'ancientGames', 'anubisRating',
+  'anubisGames', 'dust2Rating', 'dust2Games', 'infernoRating', 'infernoGames', 'mirageRating',
+  'mirageGames', 'nukeRating', 'nukeGames', 'overpassRating', 'overpassGames',
 ];
 
 interface StatAverage {

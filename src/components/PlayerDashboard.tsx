@@ -448,6 +448,8 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
         <StatItem label="Saves On Loss" value={player.savesOnLoss} subValue={`${player.savesPerRoundLoss.toFixed(3)}/rd loss`} />
         <StatItem label="Knife Kills" value={player.knifeKills} color="text-neon-purple" />
         <StatItem label="Pistol vs Rifle Kills" value={player.pistolVsRifleKills} color="text-yellow-400" />
+        <StatItem label="Damage Taken" value={player.damageTaken} color="text-red-400" />
+        <StatItem label="Avg Time To Death" value={`${player.avgTimeToDeath.toFixed(2)}s`} color="text-slate-300" />
       </StatSection>
 
       {/* Extended AWP Stats */}
@@ -468,8 +470,15 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
         <StatItem label="Flashes Thrown" value={player.flashesThrown} subValue={`${player.flashesThrownPerRound.toFixed(2)}/rd`} color="text-yellow-400" />
         <StatItem label="Flash Assists" value={player.flashAssists} subValue={`${player.flashAssistsPerRound.toFixed(3)}/rd`} color="text-yellow-300" />
         <StatItem label="Enemy Flash/Rd" value={`${player.enemyFlashDurationPerRound.toFixed(2)}s`} color="text-emerald-400" />
+        <StatItem label="Enemies Flashed" value={player.enemiesFlashed} color="text-yellow-400" />
         <StatItem label="Team Flash Count" value={player.teamFlashCount} color="text-red-400" />
         <StatItem label="Team Flash/Rd" value={`${player.teamFlashDurationPerRound.toFixed(2)}s`} color="text-red-400" />
+        <StatItem label="Smokes Thrown" value={player.smokesThrown} color="text-slate-300" />
+        <StatItem label="HEs Thrown" value={player.hesThrown} color="text-orange-400" />
+        <StatItem label="Molotovs Thrown" value={player.molotovsThrown} color="text-red-400" />
+        <StatItem label="Total Nades Thrown" value={player.totalNadesThrown} color="text-neon-cyan" />
+        <StatItem label="HE Damage" value={player.heDamage} color="text-orange-400" />
+        <StatItem label="Fire Damage" value={player.fireDamage} color="text-red-400" />
       </StatSection>
 
       {/* Extended Opening Duels */}
@@ -490,6 +499,14 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
         <StatItem label="1v1 Attempts" value={player.clutch1v1Attempts} />
         <StatItem label="1v1 Wins" value={player.clutch1v1Wins} color="text-neon-purple" />
         <StatItem label="1v1 Win %" value={pct(player.clutch1v1WinPct)} color="text-emerald-400" />
+        <StatItem label="1v2 Attempts" value={player.clutch1v2Attempts} />
+        <StatItem label="1v2 Wins" value={player.clutch1v2Wins} color="text-neon-purple" />
+        <StatItem label="1v3 Attempts" value={player.clutch1v3Attempts} />
+        <StatItem label="1v3 Wins" value={player.clutch1v3Wins} color="text-neon-purple" />
+        <StatItem label="1v4 Attempts" value={player.clutch1v4Attempts} />
+        <StatItem label="1v4 Wins" value={player.clutch1v4Wins} color="text-neon-purple" />
+        <StatItem label="1v5 Attempts" value={player.clutch1v5Attempts} />
+        <StatItem label="1v5 Wins" value={player.clutch1v5Wins} color="text-neon-purple" />
       </StatSection>
 
       {/* T Side Extended */}
@@ -508,6 +525,8 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
         <StatItem label="T Man Disadv Deaths" value={player.tManDisadvantageDeaths} subValue={pct(player.tManDisadvantageDeathsPct)} color="text-red-400" />
         <StatItem label="T Rating" value={player.tRating.toFixed(3)} color={ratingColor(player.tRating)} />
         <StatItem label="T Eco Rating" value={player.tEcoRating.toFixed(3)} color={ratingColor(player.tEcoRating)} />
+        <StatItem label="T Opening Kills" value={player.tOpeningKills} color="text-emerald-400" />
+        <StatItem label="T Opening Deaths" value={player.tOpeningDeaths} color="text-red-400" />
       </StatSection>
 
       {/* CT Side Extended */}
@@ -526,6 +545,8 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
         <StatItem label="CT Man Disadv Deaths" value={player.ctManDisadvantageDeaths} subValue={pct(player.ctManDisadvantageDeathsPct)} color="text-red-400" />
         <StatItem label="CT Rating" value={player.ctRating.toFixed(3)} color={ratingColor(player.ctRating)} />
         <StatItem label="CT Eco Rating" value={player.ctEcoRating.toFixed(3)} color={ratingColor(player.ctEcoRating)} />
+        <StatItem label="CT Opening Kills" value={player.ctOpeningKills} color="text-emerald-400" />
+        <StatItem label="CT Opening Deaths" value={player.ctOpeningDeaths} color="text-red-400" />
       </StatSection>
     </div>
   );
