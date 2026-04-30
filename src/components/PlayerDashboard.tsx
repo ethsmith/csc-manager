@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Crosshair,
   Skull,
@@ -15,6 +15,10 @@ import {
   DollarSign,
   Swords,
   HandHelping,
+  ChevronDown,
+  ChevronUp,
+  BarChart3,
+  Bomb,
 } from 'lucide-react';
 import type { PlayerStats, GroupedPlayer, StatMode, PlayerTierBreakdown } from '../types';
 import StatCard from './StatCard';
@@ -27,54 +31,6 @@ import HLTVRatingCards from './HLTVRatingCards';
 import TierBreakdown from './TierBreakdown';
 import { statRanges, getStatColor } from '../statRanges';
 
-interface StatItemProps {
-  label: string;
-  value: string | number;
-  subValue?: string;
-  color?: string;
-}
-
-function StatItem({ label, value, subValue, color = 'text-slate-200' }: StatItemProps) {
-  return (
-    <div>
-      <div className="text-xs text-slate-400 uppercase tracking-wider">{label}</div>
-      <div className={`text-lg font-bold ${color}`}>{value}</div>
-      {subValue && <div className="text-xs text-slate-500">{subValue}</div>}
-    </div>
-  );
-}
-
-interface StatSectionProps {
-  title: string;
-  icon: React.ReactNode;
-  gradientFrom: string;
-  gradientTo: string;
-  children: React.ReactNode;
-}
-
-function StatSection({ title, icon, gradientFrom, gradientTo, children }: StatSectionProps) {
-  return (
-    <div className="glass rounded-xl p-6 card-glow group">
-      <h3 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
-        <span className={`w-1.5 h-5 bg-gradient-to-b ${gradientFrom} ${gradientTo} rounded-full`}></span>
-        {icon} {title}
-      </h3>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-interface Props {
-  groupedPlayer: GroupedPlayer;
-  allGroupedPlayers: GroupedPlayer[];
-  mode: StatMode;
-  onModeChange: (mode: StatMode) => void;
-  onBack: () => void;
-  tierBreakdown: PlayerTierBreakdown | null;
-}
-
 function ratingColor(rating: number): string {
   return getStatColor(rating, statRanges.hltvRating);
 }
@@ -86,6 +42,10 @@ function kdRatio(kills: number, deaths: number): string {
 
 function pct(val: number): string {
   return `${(val * 100).toFixed(1)}%`;
+}
+
+function ipct(val: number): string {
+  return `${(val * 100).toFixed(0)}%`;
 }
 
 function getEntry(gp: GroupedPlayer, mode: StatMode): PlayerStats | null {
@@ -101,6 +61,93 @@ function getAllStatsForMode(allPlayers: GroupedPlayer[], mode: StatMode): Player
   return result;
 }
 
+/* ── Collapsible Section ─────────────────────────────────── */
+
+function CollapsibleSection({
+  title,
+  icon,
+  accent,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  accent: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="glass rounded-xl card-glow overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-3 px-6 py-4 text-left hover:bg-white/[0.02] transition-colors cursor-pointer"
+      >
+        <span className={`w-1 h-5 rounded-full ${accent}`} />
+        <span className="opacity-80">{icon}</span>
+        <span className="text-sm font-semibold text-slate-200 flex-1">{title}</span>
+        {open ? (
+          <ChevronUp size={18} className="text-slate-500" />
+        ) : (
+          <ChevronDown size={18} className="text-slate-500" />
+        )}
+      </button>
+      {open && (
+        <div className="px-6 pb-5 animate-in">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Mini stat pill used inside collapsible sections ─────── */
+
+function MiniStat({
+  label,
+  value,
+  sub,
+  colorClass,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  colorClass?: string;
+}) {
+  return (
+    <div className="bg-dark-800/60 rounded-lg px-3 py-2.5 border border-white/[0.04]">
+      <div className="text-[11px] text-slate-500 uppercase tracking-wider">{label}</div>
+      <div className={`text-base font-bold mt-0.5 ${colorClass ?? 'text-slate-200'}`}>{value}</div>
+      {sub && <div className="text-[11px] text-slate-600 mt-0.5">{sub}</div>}
+    </div>
+  );
+}
+
+/* ── Progress bar ────────────────────────────────────────── */
+
+function ProgressBar({ value, max, accent }: { value: number; max: number; accent: string }) {
+  const w = max > 0 ? Math.min((value / max) * 100, 100) : 0;
+  return (
+    <div className="h-1.5 rounded-full bg-dark-600 overflow-hidden">
+      <div
+        className={`h-full rounded-full transition-all duration-500 ${accent}`}
+        style={{ width: `${w}%` }}
+      />
+    </div>
+  );
+}
+
+/* ── Main Component ──────────────────────────────────────── */
+
+interface Props {
+  groupedPlayer: GroupedPlayer;
+  allGroupedPlayers: GroupedPlayer[];
+  mode: StatMode;
+  onModeChange: (mode: StatMode) => void;
+  onBack: () => void;
+  tierBreakdown: PlayerTierBreakdown | null;
+}
+
 export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode, onModeChange, onBack, tierBreakdown }: Props) {
   const player = getEntry(groupedPlayer, mode);
 
@@ -109,7 +156,6 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
     [allGroupedPlayers, mode]
   );
 
-  // Get players in the same CSC tier for percentile calculations
   const tierPlayers = useMemo(() => {
     const playerTier = groupedPlayer.cscTier;
     if (!playerTier) return allPlayers;
@@ -150,393 +196,307 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
     );
   }
 
+  const kd = kdRatio(player.kills, player.deaths);
+
   return (
-    <div className="space-y-6 animate-in">
-      {/* Header */}
-      <div className="flex items-center gap-4 flex-wrap">
-        <button
-          onClick={onBack}
-          className="glass rounded-lg px-4 py-2 text-sm text-slate-300 hover:text-neon-blue transition-colors neon-border-hover cursor-pointer"
-        >
-          ← Back
-        </button>
-        <ModeToggle mode={mode} onChange={onModeChange} />
-        <div className="flex-1 min-w-0">
-          <h1 className="text-3xl font-bold truncate gradient-text">{groupedPlayer.name}</h1>
-          <div className="flex items-center gap-3 mt-1 flex-wrap">
-            <span className={`text-sm px-3 py-0.5 rounded-full border ${
-              mode === 'combine'
-                ? 'bg-neon-purple/10 text-neon-purple border-neon-purple/20'
-                : 'bg-neon-blue/10 text-neon-blue border-neon-blue/20'
-            }`}>
-              {mode === 'regulation' ? (groupedPlayer.cscTier ?? player.teamName) : player.teamName}
-            </span>
-            <span className="text-sm text-slate-400">
-              {player.games} game{player.games !== 1 ? 's' : ''} · {player.roundsPlayed} rounds
-            </span>
-            {mode === 'combine' && player.name !== groupedPlayer.name && (
-              <span className="text-sm text-slate-500 italic">
-                alias: {player.name}
+    <div className="space-y-5 animate-in">
+      {/* ── Header ──────────────────────────────────── */}
+      <div className="glass rounded-2xl p-6 card-glow">
+        <div className="flex items-center gap-3 mb-4">
+          <button
+            onClick={onBack}
+            className="glass rounded-lg px-4 py-2 text-sm text-slate-300 hover:text-neon-blue transition-colors cursor-pointer"
+          >
+            ← Back
+          </button>
+          <ModeToggle mode={mode} onChange={onModeChange} />
+        </div>
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div className="min-w-0">
+            <h1 className="text-3xl font-bold truncate gradient-text">{groupedPlayer.name}</h1>
+            <div className="flex items-center gap-3 mt-2 flex-wrap">
+              <span className={`text-sm px-3 py-0.5 rounded-full border ${
+                mode === 'combine'
+                  ? 'bg-neon-purple/10 text-neon-purple border-neon-purple/20'
+                  : 'bg-neon-blue/10 text-neon-blue border-neon-blue/20'
+              }`}>
+                {mode === 'regulation' ? (groupedPlayer.cscTier ?? player.teamName) : player.teamName}
               </span>
-            )}
+              {mode === 'regulation' && groupedPlayer.cscTier && (
+                <span className="text-sm text-slate-500">{player.teamName}</span>
+              )}
+              <span className="text-sm text-slate-500">
+                {player.games} game{player.games !== 1 ? 's' : ''} · {player.roundsPlayed} rounds
+              </span>
+              {mode === 'combine' && player.name !== groupedPlayer.name && (
+                <span className="text-sm text-slate-500 italic">alias: {player.name}</span>
+              )}
+            </div>
           </div>
-        </div>
-        <div className="text-right glass rounded-xl px-5 py-3 card-glow">
-          <div className="text-xs uppercase tracking-wider text-slate-400 mb-1">Final Rating</div>
-          <div className={`text-4xl font-black ${ratingColor(player.finalRating)}`}>
-            {player.finalRating.toFixed(3)}
+          <div className="flex gap-4">
+            <div className="text-center glass rounded-xl px-5 py-3">
+              <div className="text-[11px] uppercase tracking-wider text-slate-500">Final Rating</div>
+              <div className={`text-3xl font-black ${ratingColor(player.finalRating)}`}>
+                {player.finalRating.toFixed(3)}
+              </div>
+            </div>
+            <div className="text-center glass rounded-xl px-5 py-3">
+              <div className="text-[11px] uppercase tracking-wider text-slate-500">HLTV</div>
+              <div className={`text-3xl font-black ${ratingColor(player.hltvRating)}`}>
+                {player.hltvRating.toFixed(2)}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Core Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+      {/* ── Key Stats ────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3">
         <StatCard label="K / D / A" value={`${player.kills} / ${player.deaths} / ${player.assists}`} icon={<Crosshair size={16} />} />
-        <StatCard label="K/D Ratio" value={kdRatio(player.kills, player.deaths)} icon={<Target size={16} />} color={getStatColor(parseFloat(kdRatio(player.kills, player.deaths)), statRanges.kdRatio)} />
+        <StatCard label="K/D Ratio" value={kd} icon={<Target size={16} />} color={getStatColor(parseFloat(kd), statRanges.kdRatio)} />
         <StatCard label="ADR" value={player.adr.toFixed(1)} icon={<Flame size={16} />} color={getStatColor(player.adr, statRanges.adr)} />
-        <StatCard label="HLTV Rating" value={player.hltvRating.toFixed(3)} icon={<TrendingUp size={16} />} color={getStatColor(player.hltvRating, statRanges.hltvRating)} />
         <StatCard label="KAST" value={pct(player.kast)} icon={<Shield size={16} />} color={getStatColor(player.kast, statRanges.kast)} />
+        <StatCard label="KPR" value={player.kpr.toFixed(2)} icon={<Crosshair size={16} />} color={getStatColor(player.kpr, statRanges.kpr)} />
+        <StatCard label="DPR" value={player.dpr.toFixed(2)} icon={<Skull size={16} />} color={getStatColor(player.dpr, statRanges.dpr)} />
         <StatCard label="Headshot %" value={pct(player.headshotPct)} icon={<Skull size={16} />} color={getStatColor(player.headshotPct, statRanges.headshotPct)} />
-        <StatCard label="KPR" value={player.kpr.toFixed(3)} icon={<Crosshair size={16} />} color={getStatColor(player.kpr, statRanges.kpr)} />
-        <StatCard label="DPR" value={player.dpr.toFixed(3)} icon={<Skull size={16} />} color={getStatColor(player.dpr, statRanges.dpr)} />
         <StatCard label="Survival" value={pct(player.survival)} icon={<Heart size={16} />} color={getStatColor(player.survival, statRanges.survival)} />
-        <StatCard label="Avg TTK" value={`${player.avgTimeToKill.toFixed(2)}s`} icon={<Clock size={16} />} />
-        <StatCard label="Damage/Kill" value={player.damagePerKill.toFixed(1)} icon={<Zap size={16} />} />
-        <StatCard label="Time Alive/Rd" value={`${player.timeAlivePerRound.toFixed(1)}s`} icon={<Clock size={16} />} />
       </div>
 
-      {/* HLTV-Style Rating Cards */}
+      {/* ── Rating Cards ─────────────────────────────── */}
       <HLTVRatingCards player={player} tierPlayers={tierPlayers} />
 
-      {/* Tier Breakdown */}
+      {/* ── Tier Breakdown ───────────────────────────── */}
       {tierBreakdown && <TierBreakdown tierBreakdown={tierBreakdown} />}
 
-      {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* ── Charts ───────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <PerformanceRadar player={player} allPlayers={allPlayers} />
         <KillDistribution player={player} />
       </div>
-
-      {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <SideComparison player={player} />
         <MapRatings player={player} />
       </div>
 
-      {/* Opening Duels & Clutch Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Opening Duels */}
-        <div className="glass rounded-xl p-6 card-glow group">
-          <h3 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
-            <span className="w-1.5 h-5 bg-gradient-to-b from-emerald-400 to-neon-blue rounded-full"></span>
-            <Zap size={18} className="opacity-80" /> Opening Duels
-          </h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-xs text-slate-400 uppercase tracking-wider">Opening Kills</div>
-              <div className="text-2xl font-bold text-emerald-400">{player.openingKills}</div>
-              <div className="text-xs text-slate-500">{player.openingKillsPerRound.toFixed(3)} per round</div>
-            </div>
-            <div>
-              <div className="text-xs text-slate-400 uppercase tracking-wider">Opening Deaths</div>
-              <div className="text-2xl font-bold text-red-400">{player.openingDeaths}</div>
-              <div className="text-xs text-slate-500">{player.openingDeathsPerRound.toFixed(3)} per round</div>
-            </div>
-            <div>
-              <div className="text-xs text-slate-400 uppercase tracking-wider">Success Rate</div>
-              <div className="text-2xl font-bold text-neon-blue">{pct(player.openingSuccessPct)}</div>
-            </div>
-            <div>
-              <div className="text-xs text-slate-400 uppercase tracking-wider">Win After Entry</div>
-              <div className="text-2xl font-bold text-neon-cyan">{pct(player.winPctAfterOpeningKill)}</div>
-            </div>
-          </div>
-          {/* Opening duel bar */}
-          <div className="mt-4">
-            <div className="flex justify-between text-xs text-slate-400 mb-1">
-              <span>Opening Kill Rate</span>
-              <span>{player.openingKills} / {player.openingAttempts}</span>
-            </div>
-            <div className="h-2 rounded-full bg-dark-600 overflow-hidden">
-              <div
-                className="h-full stat-bar rounded-full transition-all duration-700"
-                style={{
-                  width: `${player.openingAttempts > 0 ? (player.openingKills / player.openingAttempts) * 100 : 0}%`,
-                }}
-              />
-            </div>
-          </div>
+      {/* ── Opening Duels ────────────────────────────── */}
+      <CollapsibleSection title="Opening Duels" icon={<Zap size={18} />} accent="bg-emerald-400" defaultOpen>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          <MiniStat label="Opening Kills" value={player.openingKills} sub={`${player.openingKillsPerRound.toFixed(3)}/rd`} colorClass="text-emerald-400" />
+          <MiniStat label="Opening Deaths" value={player.openingDeaths} sub={`${player.openingDeathsPerRound.toFixed(3)}/rd`} colorClass="text-red-400" />
+          <MiniStat label="Success Rate" value={pct(player.openingSuccessPct)} colorClass="text-neon-blue" />
+          <MiniStat label="Win After Entry" value={pct(player.winPctAfterOpeningKill)} colorClass="text-neon-cyan" />
         </div>
+        <div className="space-y-2">
+          <div className="flex justify-between text-xs text-slate-500">
+            <span>Kill Rate</span>
+            <span>{player.openingKills}/{player.openingAttempts} attempts</span>
+          </div>
+          <ProgressBar value={player.openingKills} max={player.openingAttempts} accent="bg-emerald-400" />
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+          <MiniStat label="Attempts" value={player.openingAttempts} sub={pct(player.openingAttemptsPct)} />
+          <MiniStat label="Successes" value={player.openingSuccesses} colorClass="text-neon-blue" />
+          <MiniStat label="Rounds Won After" value={player.roundsWonAfterOpening} colorClass="text-emerald-400" />
+          <MiniStat label="T Op. Kills" value={player.tOpeningKills} sub={String(player.ctOpeningKills)} colorClass="text-yellow-400" />
+        </div>
+      </CollapsibleSection>
 
-        {/* Clutch & Trading */}
-        <div className="glass rounded-xl p-6 card-glow group">
-          <h3 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
-            <span className="w-1.5 h-5 bg-gradient-to-b from-neon-purple to-neon-pink rounded-full"></span>
-            <Award size={18} className="opacity-80" /> Clutch & Trading
-          </h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-xs text-slate-400 uppercase tracking-wider">Clutch Wins</div>
-              <div className="text-2xl font-bold text-neon-purple">{player.clutchWins}/{player.clutchRounds}</div>
+      {/* ── Side Comparison ──────────────────────────── */}
+      <CollapsibleSection title="Side Breakdown" icon={<Shield size={18} />} accent="bg-yellow-500">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* T Side */}
+          <div className="bg-dark-800/40 rounded-lg p-4 border border-white/[0.04]">
+            <h4 className="text-sm font-semibold text-yellow-400 mb-3 flex items-center gap-2">
+              <span className="w-1 h-3 rounded-full bg-yellow-500" />
+              T Side
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <MiniStat label="Rounds" value={player.tRoundsPlayed} />
+              <MiniStat label="Rating" value={player.tRating.toFixed(3)} colorClass={ratingColor(player.tRating)} />
+              <MiniStat label="Eco Rating" value={player.tEcoRating.toFixed(3)} colorClass={ratingColor(player.tEcoRating)} />
+              <MiniStat label="Kills" value={player.tKills} colorClass="text-emerald-400" />
+              <MiniStat label="Deaths" value={player.tDeaths} colorClass="text-red-400" />
+              <MiniStat label="Damage" value={player.tDamage} colorClass="text-neon-blue" />
+              <MiniStat label="KAST" value={pct(player.tKast)} colorClass="text-neon-blue" />
+              <MiniStat label="Survivals" value={player.tSurvivals} colorClass="text-emerald-400" />
+              <MiniStat label="Multi-Kill Rds" value={player.tRoundsWithMultiKill} colorClass="text-neon-purple" />
+              <MiniStat label="Eco Kill Val" value={player.tEcoKillValue} />
+              <MiniStat label="Clutch Wins" value={`${player.tClutchWins}/${player.tClutchRounds}`} colorClass="text-neon-purple" />
+              <MiniStat label="Man Adv Kills" value={player.tManAdvantageKills} sub={pct(player.tManAdvantageKillsPct)} colorClass="text-emerald-400" />
+              <MiniStat label="Man Disadv Dths" value={player.tManDisadvantageDeaths} sub={pct(player.tManDisadvantageDeathsPct)} colorClass="text-red-400" />
+              <MiniStat label="Op. Kills" value={player.tOpeningKills} colorClass="text-emerald-400" />
+              <MiniStat label="Op. Deaths" value={player.tOpeningDeaths} colorClass="text-red-400" />
             </div>
-            <div>
-              <div className="text-xs text-slate-400 uppercase tracking-wider">1v1 Clutch</div>
-              <div className="text-2xl font-bold text-neon-purple">
-                {player.clutch1v1Wins}/{player.clutch1v1Attempts}
-                {player.clutch1v1Attempts > 0 && (
-                  <span className="text-sm ml-1 text-slate-400">({pct(player.clutch1v1WinPct)})</span>
-                )}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs text-slate-400 uppercase tracking-wider">Trade Kills</div>
-              <div className="text-2xl font-bold text-emerald-400">{player.tradeKills}</div>
-              <div className="text-xs text-slate-500">{player.tradeKillsPerRound.toFixed(3)} per round</div>
-            </div>
-            <div>
-              <div className="text-xs text-slate-400 uppercase tracking-wider">Traded Deaths</div>
-              <div className="text-2xl font-bold text-yellow-400">{player.tradedDeaths}</div>
-              <div className="text-xs text-slate-500">{pct(player.tradedDeathsPct)} of deaths</div>
+          </div>
+          {/* CT Side */}
+          <div className="bg-dark-800/40 rounded-lg p-4 border border-white/[0.04]">
+            <h4 className="text-sm font-semibold text-neon-blue mb-3 flex items-center gap-2">
+              <span className="w-1 h-3 rounded-full bg-neon-blue" />
+              CT Side
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <MiniStat label="Rounds" value={player.ctRoundsPlayed} />
+              <MiniStat label="Rating" value={player.ctRating.toFixed(3)} colorClass={ratingColor(player.ctRating)} />
+              <MiniStat label="Eco Rating" value={player.ctEcoRating.toFixed(3)} colorClass={ratingColor(player.ctEcoRating)} />
+              <MiniStat label="Kills" value={player.ctKills} colorClass="text-emerald-400" />
+              <MiniStat label="Deaths" value={player.ctDeaths} colorClass="text-red-400" />
+              <MiniStat label="Damage" value={player.ctDamage} colorClass="text-neon-blue" />
+              <MiniStat label="KAST" value={pct(player.ctKast)} colorClass="text-neon-blue" />
+              <MiniStat label="Survivals" value={player.ctSurvivals} colorClass="text-emerald-400" />
+              <MiniStat label="Multi-Kill Rds" value={player.ctRoundsWithMultiKill} colorClass="text-neon-purple" />
+              <MiniStat label="Eco Kill Val" value={player.ctEcoKillValue} />
+              <MiniStat label="Clutch Wins" value={`${player.ctClutchWins}/${player.ctClutchRounds}`} colorClass="text-neon-purple" />
+              <MiniStat label="Man Adv Kills" value={player.ctManAdvantageKills} sub={pct(player.ctManAdvantageKillsPct)} colorClass="text-emerald-400" />
+              <MiniStat label="Man Disadv Dths" value={player.ctManDisadvantageDeaths} sub={pct(player.ctManDisadvantageDeathsPct)} colorClass="text-red-400" />
+              <MiniStat label="Op. Kills" value={player.ctOpeningKills} colorClass="text-emerald-400" />
+              <MiniStat label="Op. Deaths" value={player.ctOpeningDeaths} colorClass="text-red-400" />
             </div>
           </div>
         </div>
-      </div>
+      </CollapsibleSection>
 
-      {/* AWP & Utility Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* AWP Stats */}
-        <div className="glass rounded-xl p-6 card-glow group">
-          <h3 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
-            <span className="w-1.5 h-5 bg-gradient-to-b from-neon-blue to-neon-cyan rounded-full"></span>
-            <Eye size={18} className="opacity-80" /> AWP Stats
-          </h3>
-          {player.awpKills > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="text-xs text-slate-400 uppercase tracking-wider">AWP Kills</div>
-                <div className="text-2xl font-bold text-neon-blue">{player.awpKills}</div>
-                <div className="text-xs text-slate-500">{player.awpKillsPerRound.toFixed(3)} per round</div>
-              </div>
-              <div>
-                <div className="text-xs text-slate-400 uppercase tracking-wider">AWP Kill Rounds</div>
-                <div className="text-2xl font-bold text-neon-cyan">{player.roundsWithAwpKill}</div>
-                <div className="text-xs text-slate-500">{pct(player.roundsWithAwpKillPct)} of rounds</div>
-              </div>
-              <div>
-                <div className="text-xs text-slate-400 uppercase tracking-wider">AWP Multi-Kill Rds</div>
-                <div className="text-2xl font-bold text-neon-purple">{player.awpMultiKillRounds}</div>
-              </div>
-              <div>
-                <div className="text-xs text-slate-400 uppercase tracking-wider">AWP Opening Kills</div>
-                <div className="text-2xl font-bold text-emerald-400">{player.awpOpeningKills}</div>
-              </div>
-            </div>
-          ) : (
-            <p className="text-slate-500 text-sm">No AWP kills recorded</p>
-          )}
+      {/* ── Economy & Impact ─────────────────────────── */}
+      <CollapsibleSection title="Economy & Impact" icon={<DollarSign size={18} />} accent="bg-yellow-400">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          <MiniStat label="Eco Kill Value" value={player.ecoKillValue} colorClass="text-emerald-400" />
+          <MiniStat label="Eco Death Value" value={player.ecoDeathValue} colorClass="text-red-400" />
+          <MiniStat label="Duel Swing" value={player.duelSwing.toFixed(3)} sub={`${player.duelSwingPerRound.toFixed(4)}/rd`} colorClass="text-neon-cyan" />
+          <MiniStat label="Econ Impact" value={player.econImpact.toFixed(1)} colorClass="text-neon-blue" />
+          <MiniStat label="Round Impact" value={player.roundImpact.toFixed(3)} colorClass="text-neon-cyan" />
+          <MiniStat label="Prob Swing" value={player.probabilitySwing.toFixed(3)} sub={`${player.probabilitySwingPerRound.toFixed(4)}/rd`} colorClass="text-neon-purple" />
+          <MiniStat label="Low Buy Kills" value={player.lowBuyKills} sub={pct(player.lowBuyKillsPct)} />
+          <MiniStat label="Disadv Buy Kills" value={player.disadvantagedBuyKills} sub={pct(player.disadvantagedBuyKillsPct)} />
+          <MiniStat label="Exit Frags" value={player.exitFrags} colorClass="text-neon-cyan" />
+          <MiniStat label="Saves On Loss" value={player.savesOnLoss} sub={`${player.savesPerRoundLoss.toFixed(3)}/rd`} />
         </div>
+      </CollapsibleSection>
 
-        {/* Utility */}
-        <div className="glass rounded-xl p-6 card-glow group">
-          <h3 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
-            <span className="w-1.5 h-5 bg-gradient-to-b from-yellow-400 to-orange-500 rounded-full"></span>
-            <Shield size={18} className="opacity-80" /> Utility Usage
-          </h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-xs text-slate-400 uppercase tracking-wider">Util Damage</div>
-              <div className="text-2xl font-bold text-neon-blue">{player.utilityDamage}</div>
-              <div className="text-xs text-slate-500">{player.utilityDamagePerRound.toFixed(1)} per round</div>
-            </div>
-            <div>
-              <div className="text-xs text-slate-400 uppercase tracking-wider">Util Kills</div>
-              <div className="text-2xl font-bold text-neon-cyan">{player.utilityKills}</div>
-            </div>
-            <div>
-              <div className="text-xs text-slate-400 uppercase tracking-wider">Flashes Thrown</div>
-              <div className="text-2xl font-bold text-yellow-400">{player.flashesThrown}</div>
-              <div className="text-xs text-slate-500">{player.flashesThrownPerRound.toFixed(2)} per round</div>
-            </div>
-            <div>
-              <div className="text-xs text-slate-400 uppercase tracking-wider">Flash Assists</div>
-              <div className="text-2xl font-bold text-yellow-300">{player.flashAssists}</div>
-              <div className="text-xs text-slate-500">{player.enemyFlashDurationPerRound.toFixed(2)}s enemy blind/rd</div>
-            </div>
+      {/* ── Trading & Teamplay ───────────────────────── */}
+      <CollapsibleSection title="Trading & Teamplay" icon={<Swords size={18} />} accent="bg-neon-blue">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          <MiniStat label="Trade Kills" value={player.tradeKills} sub={`${player.tradeKillsPerRound.toFixed(3)}/rd · ${pct(player.tradeKillsPct)}`} colorClass="text-emerald-400" />
+          <MiniStat label="Fast Trades" value={player.fastTrades} colorClass="text-neon-cyan" />
+          <MiniStat label="Traded Deaths" value={player.tradedDeaths} sub={`${player.tradedDeathsPerRound.toFixed(3)}/rd · ${pct(player.tradedDeathsPct)}`} colorClass="text-yellow-400" />
+          <MiniStat label="Trade Denials" value={player.tradeDenials} colorClass="text-red-400" />
+          <MiniStat label="Saved Teammate" value={player.savedTeammate} sub={`${player.savedTeammatePerRound.toFixed(3)}/rd`} colorClass="text-emerald-400" />
+          <MiniStat label="Saved By Mate" value={player.savedByTeammate} sub={`${player.savedByTeammatePerRound.toFixed(3)}/rd`} />
+          <MiniStat label="OD Traded" value={player.openingDeathsTraded} sub={pct(player.openingDeathsTradedPct)} />
+          <MiniStat label="Last Alive Rds" value={player.lastAliveRounds} sub={pct(player.lastAlivePct)} />
+          <MiniStat label="Support Rounds" value={player.supportRounds} sub={pct(player.supportRoundsPct)} colorClass="text-neon-blue" />
+          <MiniStat label="Assisted Kills" value={player.assistedKills} sub={pct(player.assistedKillsPct)} colorClass="text-emerald-400" />
+          <MiniStat label="Assists / Rd" value={player.assistsPerRound.toFixed(3)} />
+          <MiniStat label="Attack Rounds" value={player.attackRounds} sub={`${player.attacksPerRound.toFixed(3)}/rd`} />
+        </div>
+      </CollapsibleSection>
+
+      {/* ── Combat ───────────────────────────────────── */}
+      <CollapsibleSection title="Combat & Multi-Kills" icon={<Flame size={18} />} accent="bg-orange-400">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            {[
+              { label: '1K', val: player.oneK },
+              { label: '2K', val: player.twoK, c: 'text-neon-blue' },
+              { label: '3K', val: player.threeK, c: 'text-neon-cyan' },
+              { label: '4K', val: player.fourK, c: 'text-neon-purple' },
+              { label: '5K', val: player.fiveK, c: 'text-emerald-400' },
+            ].map((mk) => (
+              <span key={mk.label} className={`text-xs px-2 py-1 rounded border border-white/10 bg-dark-700/50 ${mk.c ?? 'text-slate-300'}`}>
+                {mk.label} <span className="font-bold">{mk.val}</span>
+              </span>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            <MiniStat label="Rounds w/ Kill" value={player.roundsWithKill} sub={pct(player.roundsWithKillPct)} />
+            <MiniStat label="Rounds w/ Multi" value={player.roundsWithMultiKill} sub={pct(player.roundsWithMultiKillPct)} />
+            <MiniStat label="Kills Won Rds" value={player.killsInWonRounds} sub={`${player.killsPerRoundWin.toFixed(2)}/rd`} colorClass="text-emerald-400" />
+            <MiniStat label="Dmg Won Rds" value={player.damageInWonRounds} sub={`${player.damagePerRoundWin.toFixed(1)}/rd`} />
+            <MiniStat label="Perfect Kills" value={player.perfectKills} colorClass="text-emerald-400" />
+            <MiniStat label="Knife Kills" value={player.knifeKills} colorClass="text-neon-purple" />
+            <MiniStat label="Pistol vs Rifle" value={player.pistolVsRifleKills} colorClass="text-yellow-400" />
+            <MiniStat label="Avg TTK" value={`${player.avgTimeToKill.toFixed(2)}s`} />
+            <MiniStat label="Avg TTD" value={`${player.avgTimeToDeath.toFixed(2)}s`} />
+            <MiniStat label="Dmg / Kill" value={player.damagePerKill.toFixed(1)} />
+            <MiniStat label="Time Alive/Rd" value={`${player.timeAlivePerRound.toFixed(1)}s`} />
+            <MiniStat label="Damage Taken" value={player.damageTaken} colorClass="text-red-400" />
+            <MiniStat label="Early Deaths" value={player.earlyDeaths} colorClass="text-red-400" />
+            <MiniStat label="Man Adv Kills" value={player.manAdvantageKills} sub={pct(player.manAdvantageKillsPct)} colorClass="text-emerald-400" />
+            <MiniStat label="Man Disadv Dths" value={player.manDisadvantageDeaths} sub={pct(player.manDisadvantageDeathsPct)} colorClass="text-red-400" />
           </div>
         </div>
-      </div>
+      </CollapsibleSection>
 
-      {/* Pistol Round Stats */}
-      <StatSection title="Pistol Rounds" icon={<Target size={18} className="opacity-80" />} gradientFrom="from-neon-cyan" gradientTo="to-emerald-400">
-        <StatItem label="Rounds Played" value={player.pistolRoundsPlayed} />
-        <StatItem label="Rounds Won" value={player.pistolRoundsWon} color="text-emerald-400" />
-        <StatItem label="Kills" value={player.pistolRoundKills} color="text-neon-blue" />
-        <StatItem label="Deaths" value={player.pistolRoundDeaths} color="text-red-400" />
-        <StatItem label="Damage" value={player.pistolRoundDamage} color="text-neon-cyan" />
-        <StatItem label="Survivals" value={player.pistolRoundSurvivals} color="text-emerald-400" />
-        <StatItem label="Multi-Kills" value={player.pistolRoundMultiKills} color="text-neon-purple" />
-        <StatItem label="Rating" value={player.pistolRoundRating.toFixed(3)} color={ratingColor(player.pistolRoundRating)} />
-      </StatSection>
+      {/* ── Clutch ───────────────────────────────────── */}
+      <CollapsibleSection title="Clutch Performance" icon={<Award size={18} />} accent="bg-neon-purple">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+          <MiniStat label="Clutch Rounds" value={player.clutchRounds} />
+          <MiniStat label="Clutch Wins" value={player.clutchWins} colorClass="text-neon-purple" />
+          <MiniStat label="Pts / Rd" value={player.clutchPointsPerRound.toFixed(4)} colorClass="text-neon-cyan" />
+          <MiniStat label="1v1" value={`${player.clutch1v1Wins}/${player.clutch1v1Attempts}`} sub={player.clutch1v1Attempts > 0 ? pct(player.clutch1v1WinPct) : undefined} colorClass="text-emerald-400" />
+          <MiniStat label="1v2" value={`${player.clutch1v2Wins}/${player.clutch1v2Attempts}`} colorClass="text-neon-purple" />
+          <MiniStat label="1v3" value={`${player.clutch1v3Wins}/${player.clutch1v3Attempts}`} colorClass="text-neon-purple" />
+          <MiniStat label="1v4" value={`${player.clutch1v4Wins}/${player.clutch1v4Attempts}`} colorClass="text-neon-purple" />
+          <MiniStat label="1v5" value={`${player.clutch1v5Wins}/${player.clutch1v5Attempts}`} colorClass="text-neon-purple" />
+        </div>
+      </CollapsibleSection>
 
-      {/* Economy & Impact */}
-      <StatSection title="Economy & Impact" icon={<DollarSign size={18} className="opacity-80" />} gradientFrom="from-yellow-400" gradientTo="to-emerald-400">
-        <StatItem label="Eco Kill Value" value={player.ecoKillValue} color="text-emerald-400" />
-        <StatItem label="Eco Death Value" value={player.ecoDeathValue} color="text-red-400" />
-        <StatItem label="Duel Swing" value={player.duelSwing.toFixed(3)} color="text-neon-cyan" />
-        <StatItem label="Duel Swing/Rd" value={player.duelSwingPerRound.toFixed(4)} color={getStatColor(player.duelSwingPerRound, statRanges.duelSwingPerRound)} />
-        <StatItem label="Econ Impact" value={player.econImpact.toFixed(1)} color="text-neon-blue" />
-        <StatItem label="Round Impact" value={player.roundImpact.toFixed(3)} color="text-neon-cyan" />
-        <StatItem label="Probability Swing" value={player.probabilitySwing.toFixed(3)} color="text-neon-purple" />
-        <StatItem label="Prob Swing/Rd" value={player.probabilitySwingPerRound.toFixed(4)} />
-        <StatItem label="Low Buy Kills" value={player.lowBuyKills} subValue={pct(player.lowBuyKillsPct)} />
-        <StatItem label="Disadvantaged Buy Kills" value={player.disadvantagedBuyKills} subValue={pct(player.disadvantagedBuyKillsPct)} />
-      </StatSection>
+      {/* ── Pistol & AWP ─────────────────────────────── */}
+      <CollapsibleSection title="Pistol & AWP" icon={<Target size={18} />} accent="bg-neon-cyan">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Pistol */}
+          <div className="bg-dark-800/40 rounded-lg p-4 border border-white/[0.04]">
+            <h4 className="text-sm font-semibold text-neon-cyan mb-3 flex items-center gap-2">
+              <span className="w-1 h-3 rounded-full bg-neon-cyan" />
+              Pistol Rounds
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <MiniStat label="Played" value={player.pistolRoundsPlayed} />
+              <MiniStat label="Won" value={player.pistolRoundsWon} colorClass="text-emerald-400" />
+              <MiniStat label="Rating" value={player.pistolRoundRating.toFixed(3)} colorClass={ratingColor(player.pistolRoundRating)} />
+              <MiniStat label="Kills" value={player.pistolRoundKills} colorClass="text-neon-blue" />
+              <MiniStat label="Deaths" value={player.pistolRoundDeaths} colorClass="text-red-400" />
+              <MiniStat label="Damage" value={player.pistolRoundDamage} colorClass="text-neon-cyan" />
+              <MiniStat label="Survivals" value={player.pistolRoundSurvivals} colorClass="text-emerald-400" />
+              <MiniStat label="Multi-Kills" value={player.pistolRoundMultiKills} colorClass="text-neon-purple" />
+            </div>
+          </div>
+          {/* AWP */}
+          <div className="bg-dark-800/40 rounded-lg p-4 border border-white/[0.04]">
+            <h4 className="text-sm font-semibold text-neon-blue mb-3 flex items-center gap-2">
+              <span className="w-1 h-3 rounded-full bg-neon-blue" />
+              AWP {player.awpKills === 0 && <span className="text-slate-500 font-normal text-xs">— no kills recorded</span>}
+            </h4>
+            {player.awpKills > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <MiniStat label="Kills" value={player.awpKills} sub={`${player.awpKillsPerRound.toFixed(3)}/rd`} colorClass="text-neon-blue" />
+                <MiniStat label="Kill %" value={pct(player.awpKillsPct)} colorClass="text-neon-blue" />
+                <MiniStat label="Kill Rounds" value={player.roundsWithAwpKill} sub={pct(player.roundsWithAwpKillPct)} />
+                <MiniStat label="Multi-Kill Rds" value={player.awpMultiKillRounds} sub={`${player.awpMultiKillRoundsPerRound.toFixed(4)}/rd`} colorClass="text-neon-purple" />
+                <MiniStat label="Op. Kills" value={player.awpOpeningKills} sub={`${player.awpOpeningKillsPerRound.toFixed(4)}/rd`} colorClass="text-emerald-400" />
+                <MiniStat label="Deaths" value={player.awpDeaths} colorClass="text-red-400" />
+                <MiniStat label="Deaths No Kill" value={player.awpDeathsNoKill} colorClass="text-red-400" />
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </CollapsibleSection>
 
-      {/* Trading Stats */}
-      <StatSection title="Trading" icon={<Swords size={18} className="opacity-80" />} gradientFrom="from-neon-blue" gradientTo="to-neon-purple">
-        <StatItem label="Trade Kills" value={player.tradeKills} subValue={`${player.tradeKillsPerRound.toFixed(3)}/rd`} color="text-emerald-400" />
-        <StatItem label="Trade Kills %" value={pct(player.tradeKillsPct)} color="text-emerald-400" />
-        <StatItem label="Fast Trades" value={player.fastTrades} color="text-neon-cyan" />
-        <StatItem label="Traded Deaths" value={player.tradedDeaths} subValue={`${player.tradedDeathsPerRound.toFixed(3)}/rd`} color="text-yellow-400" />
-        <StatItem label="Traded Deaths %" value={pct(player.tradedDeathsPct)} color="text-yellow-400" />
-        <StatItem label="Trade Denials" value={player.tradeDenials} color="text-red-400" />
-        <StatItem label="Saved By Teammate" value={player.savedByTeammate} subValue={`${player.savedByTeammatePerRound.toFixed(3)}/rd`} />
-        <StatItem label="Saved Teammate" value={player.savedTeammate} subValue={`${player.savedTeammatePerRound.toFixed(3)}/rd`} color="text-emerald-400" />
-        <StatItem label="Opening Deaths Traded" value={player.openingDeathsTraded} subValue={pct(player.openingDeathsTradedPct)} />
-      </StatSection>
-
-      {/* Support & Teamplay */}
-      <StatSection title="Support & Teamplay" icon={<HandHelping size={18} className="opacity-80" />} gradientFrom="from-emerald-400" gradientTo="to-neon-blue">
-        <StatItem label="Support Rounds" value={player.supportRounds} subValue={pct(player.supportRoundsPct)} color="text-neon-blue" />
-        <StatItem label="Assisted Kills" value={player.assistedKills} subValue={pct(player.assistedKillsPct)} color="text-emerald-400" />
-        <StatItem label="Assists/Rd" value={player.assistsPerRound.toFixed(3)} />
-        <StatItem label="Attack Rounds" value={player.attackRounds} subValue={`${player.attacksPerRound.toFixed(3)}/rd`} />
-      </StatSection>
-
-      {/* Multi-Kill & Won Round Stats */}
-      <StatSection title="Multi-Kills & Won Rounds" icon={<Flame size={18} className="opacity-80" />} gradientFrom="from-orange-400" gradientTo="to-red-500">
-        <StatItem label="1K Rounds" value={player.oneK} />
-        <StatItem label="2K Rounds" value={player.twoK} color="text-neon-blue" />
-        <StatItem label="3K Rounds" value={player.threeK} color="text-neon-cyan" />
-        <StatItem label="4K Rounds" value={player.fourK} color="text-neon-purple" />
-        <StatItem label="5K Rounds" value={player.fiveK} color="text-emerald-400" />
-        <StatItem label="Rounds w/ Kill" value={player.roundsWithKill} subValue={pct(player.roundsWithKillPct)} />
-        <StatItem label="Rounds w/ Multi-Kill" value={player.roundsWithMultiKill} subValue={pct(player.roundsWithMultiKillPct)} />
-        <StatItem label="Kills In Won Rounds" value={player.killsInWonRounds} subValue={`${player.killsPerRoundWin.toFixed(2)}/rd win`} color="text-emerald-400" />
-        <StatItem label="Damage In Won Rounds" value={player.damageInWonRounds} subValue={`${player.damagePerRoundWin.toFixed(1)}/rd win`} />
-        <StatItem label="Perfect Kills" value={player.perfectKills} color="text-emerald-400" />
-      </StatSection>
-
-      {/* Combat Situations */}
-      <StatSection title="Combat Situations" icon={<Users size={18} className="opacity-80" />} gradientFrom="from-red-400" gradientTo="to-orange-500">
-        <StatItem label="Man Advantage Kills" value={player.manAdvantageKills} subValue={pct(player.manAdvantageKillsPct)} color="text-emerald-400" />
-        <StatItem label="Man Disadvantage Deaths" value={player.manDisadvantageDeaths} subValue={pct(player.manDisadvantageDeathsPct)} color="text-red-400" />
-        <StatItem label="Exit Frags" value={player.exitFrags} color="text-neon-cyan" />
-        <StatItem label="Early Deaths" value={player.earlyDeaths} color="text-red-400" />
-        <StatItem label="Last Alive Rounds" value={player.lastAliveRounds} subValue={pct(player.lastAlivePct)} />
-        <StatItem label="Saves On Loss" value={player.savesOnLoss} subValue={`${player.savesPerRoundLoss.toFixed(3)}/rd loss`} />
-        <StatItem label="Knife Kills" value={player.knifeKills} color="text-neon-purple" />
-        <StatItem label="Pistol vs Rifle Kills" value={player.pistolVsRifleKills} color="text-yellow-400" />
-        <StatItem label="Damage Taken" value={player.damageTaken} color="text-red-400" />
-        <StatItem label="Avg Time To Death" value={`${player.avgTimeToDeath.toFixed(2)}s`} color="text-slate-300" />
-      </StatSection>
-
-      {/* Extended AWP Stats */}
-      <StatSection title="AWP (Extended)" icon={<Eye size={18} className="opacity-80" />} gradientFrom="from-neon-blue" gradientTo="to-neon-cyan">
-        <StatItem label="AWP Kills" value={player.awpKills} subValue={`${player.awpKillsPerRound.toFixed(3)}/rd`} color="text-neon-blue" />
-        <StatItem label="AWP Kills %" value={pct(player.awpKillsPct)} color="text-neon-blue" />
-        <StatItem label="Rounds w/ AWP Kill" value={player.roundsWithAwpKill} subValue={pct(player.roundsWithAwpKillPct)} />
-        <StatItem label="AWP Multi-Kill Rds" value={player.awpMultiKillRounds} subValue={`${player.awpMultiKillRoundsPerRound.toFixed(4)}/rd`} color="text-neon-purple" />
-        <StatItem label="AWP Opening Kills" value={player.awpOpeningKills} subValue={`${player.awpOpeningKillsPerRound.toFixed(4)}/rd`} color="text-emerald-400" />
-        <StatItem label="AWP Deaths" value={player.awpDeaths} color="text-red-400" />
-        <StatItem label="AWP Deaths No Kill" value={player.awpDeathsNoKill} color="text-red-400" />
-      </StatSection>
-
-      {/* Extended Utility Stats */}
-      <StatSection title="Utility (Extended)" icon={<Shield size={18} className="opacity-80" />} gradientFrom="from-yellow-400" gradientTo="to-orange-500">
-        <StatItem label="Utility Damage" value={player.utilityDamage} subValue={`${player.utilityDamagePerRound.toFixed(1)}/rd`} color="text-neon-blue" />
-        <StatItem label="Utility Kills" value={player.utilityKills} subValue={`${player.utilityKillsPer100Rounds.toFixed(2)}/100 rds`} color="text-neon-cyan" />
-        <StatItem label="Flashes Thrown" value={player.flashesThrown} subValue={`${player.flashesThrownPerRound.toFixed(2)}/rd`} color="text-yellow-400" />
-        <StatItem label="Flash Assists" value={player.flashAssists} subValue={`${player.flashAssistsPerRound.toFixed(3)}/rd`} color="text-yellow-300" />
-        <StatItem label="Enemy Flash/Rd" value={`${player.enemyFlashDurationPerRound.toFixed(2)}s`} color="text-emerald-400" />
-        <StatItem label="Enemies Flashed" value={player.enemiesFlashed} color="text-yellow-400" />
-        <StatItem label="Team Flash Count" value={player.teamFlashCount} color="text-red-400" />
-        <StatItem label="Team Flash/Rd" value={`${player.teamFlashDurationPerRound.toFixed(2)}s`} color="text-red-400" />
-        <StatItem label="Smokes Thrown" value={player.smokesThrown} color="text-slate-300" />
-        <StatItem label="HEs Thrown" value={player.hesThrown} color="text-orange-400" />
-        <StatItem label="Molotovs Thrown" value={player.molotovsThrown} color="text-red-400" />
-        <StatItem label="Total Nades Thrown" value={player.totalNadesThrown} color="text-neon-cyan" />
-        <StatItem label="HE Damage" value={player.heDamage} color="text-orange-400" />
-        <StatItem label="Fire Damage" value={player.fireDamage} color="text-red-400" />
-      </StatSection>
-
-      {/* Extended Opening Duels */}
-      <StatSection title="Opening Duels (Extended)" icon={<Zap size={18} className="opacity-80" />} gradientFrom="from-emerald-400" gradientTo="to-neon-blue">
-        <StatItem label="Opening Kills" value={player.openingKills} subValue={`${player.openingKillsPerRound.toFixed(3)}/rd`} color="text-emerald-400" />
-        <StatItem label="Opening Deaths" value={player.openingDeaths} subValue={`${player.openingDeathsPerRound.toFixed(3)}/rd`} color="text-red-400" />
-        <StatItem label="Opening Attempts" value={player.openingAttempts} subValue={pct(player.openingAttemptsPct)} />
-        <StatItem label="Opening Successes" value={player.openingSuccesses} subValue={pct(player.openingSuccessPct)} color="text-neon-blue" />
-        <StatItem label="Rounds Won After Opening" value={player.roundsWonAfterOpening} color="text-emerald-400" />
-        <StatItem label="Win % After Entry" value={pct(player.winPctAfterOpeningKill)} color="text-neon-cyan" />
-      </StatSection>
-
-      {/* Extended Clutch Stats */}
-      <StatSection title="Clutch (Extended)" icon={<Award size={18} className="opacity-80" />} gradientFrom="from-neon-purple" gradientTo="to-neon-pink">
-        <StatItem label="Clutch Rounds" value={player.clutchRounds} />
-        <StatItem label="Clutch Wins" value={player.clutchWins} color="text-neon-purple" />
-        <StatItem label="Clutch Points/Rd" value={player.clutchPointsPerRound.toFixed(4)} color="text-neon-cyan" />
-        <StatItem label="1v1 Attempts" value={player.clutch1v1Attempts} />
-        <StatItem label="1v1 Wins" value={player.clutch1v1Wins} color="text-neon-purple" />
-        <StatItem label="1v1 Win %" value={pct(player.clutch1v1WinPct)} color="text-emerald-400" />
-        <StatItem label="1v2 Attempts" value={player.clutch1v2Attempts} />
-        <StatItem label="1v2 Wins" value={player.clutch1v2Wins} color="text-neon-purple" />
-        <StatItem label="1v3 Attempts" value={player.clutch1v3Attempts} />
-        <StatItem label="1v3 Wins" value={player.clutch1v3Wins} color="text-neon-purple" />
-        <StatItem label="1v4 Attempts" value={player.clutch1v4Attempts} />
-        <StatItem label="1v4 Wins" value={player.clutch1v4Wins} color="text-neon-purple" />
-        <StatItem label="1v5 Attempts" value={player.clutch1v5Attempts} />
-        <StatItem label="1v5 Wins" value={player.clutch1v5Wins} color="text-neon-purple" />
-      </StatSection>
-
-      {/* T Side Extended */}
-      <StatSection title="T Side (Extended)" icon={<Crosshair size={18} className="opacity-80" />} gradientFrom="from-yellow-500" gradientTo="to-orange-500">
-        <StatItem label="T Rounds Played" value={player.tRoundsPlayed} />
-        <StatItem label="T Kills" value={player.tKills} color="text-emerald-400" />
-        <StatItem label="T Deaths" value={player.tDeaths} color="text-red-400" />
-        <StatItem label="T Damage" value={player.tDamage} color="text-neon-blue" />
-        <StatItem label="T Survivals" value={player.tSurvivals} color="text-emerald-400" />
-        <StatItem label="T Multi-Kill Rds" value={player.tRoundsWithMultiKill} color="text-neon-purple" />
-        <StatItem label="T Eco Kill Value" value={player.tEcoKillValue} />
-        <StatItem label="T KAST" value={pct(player.tKast)} color="text-neon-blue" />
-        <StatItem label="T Clutch Rounds" value={player.tClutchRounds} />
-        <StatItem label="T Clutch Wins" value={player.tClutchWins} color="text-neon-purple" />
-        <StatItem label="T Man Adv Kills" value={player.tManAdvantageKills} subValue={pct(player.tManAdvantageKillsPct)} color="text-emerald-400" />
-        <StatItem label="T Man Disadv Deaths" value={player.tManDisadvantageDeaths} subValue={pct(player.tManDisadvantageDeathsPct)} color="text-red-400" />
-        <StatItem label="T Rating" value={player.tRating.toFixed(3)} color={ratingColor(player.tRating)} />
-        <StatItem label="T Eco Rating" value={player.tEcoRating.toFixed(3)} color={ratingColor(player.tEcoRating)} />
-        <StatItem label="T Opening Kills" value={player.tOpeningKills} color="text-emerald-400" />
-        <StatItem label="T Opening Deaths" value={player.tOpeningDeaths} color="text-red-400" />
-      </StatSection>
-
-      {/* CT Side Extended */}
-      <StatSection title="CT Side (Extended)" icon={<Shield size={18} className="opacity-80" />} gradientFrom="from-blue-500" gradientTo="to-cyan-500">
-        <StatItem label="CT Rounds Played" value={player.ctRoundsPlayed} />
-        <StatItem label="CT Kills" value={player.ctKills} color="text-emerald-400" />
-        <StatItem label="CT Deaths" value={player.ctDeaths} color="text-red-400" />
-        <StatItem label="CT Damage" value={player.ctDamage} color="text-neon-blue" />
-        <StatItem label="CT Survivals" value={player.ctSurvivals} color="text-emerald-400" />
-        <StatItem label="CT Multi-Kill Rds" value={player.ctRoundsWithMultiKill} color="text-neon-purple" />
-        <StatItem label="CT Eco Kill Value" value={player.ctEcoKillValue} />
-        <StatItem label="CT KAST" value={pct(player.ctKast)} color="text-neon-blue" />
-        <StatItem label="CT Clutch Rounds" value={player.ctClutchRounds} />
-        <StatItem label="CT Clutch Wins" value={player.ctClutchWins} color="text-neon-purple" />
-        <StatItem label="CT Man Adv Kills" value={player.ctManAdvantageKills} subValue={pct(player.ctManAdvantageKillsPct)} color="text-emerald-400" />
-        <StatItem label="CT Man Disadv Deaths" value={player.ctManDisadvantageDeaths} subValue={pct(player.ctManDisadvantageDeathsPct)} color="text-red-400" />
-        <StatItem label="CT Rating" value={player.ctRating.toFixed(3)} color={ratingColor(player.ctRating)} />
-        <StatItem label="CT Eco Rating" value={player.ctEcoRating.toFixed(3)} color={ratingColor(player.ctEcoRating)} />
-        <StatItem label="CT Opening Kills" value={player.ctOpeningKills} color="text-emerald-400" />
-        <StatItem label="CT Opening Deaths" value={player.ctOpeningDeaths} color="text-red-400" />
-      </StatSection>
+      {/* ── Utility ──────────────────────────────────── */}
+      <CollapsibleSection title="Utility Usage" icon={<Bomb size={18} />} accent="bg-yellow-400">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          <MiniStat label="Util Damage" value={player.utilityDamage} sub={`${player.utilityDamagePerRound.toFixed(1)}/rd`} colorClass="text-neon-blue" />
+          <MiniStat label="Util Kills" value={player.utilityKills} sub={`${player.utilityKillsPer100Rounds.toFixed(2)}/100rd`} colorClass="text-neon-cyan" />
+          <MiniStat label="HE Damage" value={player.heDamage} colorClass="text-orange-400" />
+          <MiniStat label="Fire Damage" value={player.fireDamage} colorClass="text-red-400" />
+          <MiniStat label="Flashes Thrown" value={player.flashesThrown} sub={`${player.flashesThrownPerRound.toFixed(2)}/rd`} colorClass="text-yellow-400" />
+          <MiniStat label="Flash Assists" value={player.flashAssists} sub={`${player.flashAssistsPerRound.toFixed(3)}/rd`} colorClass="text-yellow-300" />
+          <MiniStat label="Enemy Flash" value={`${player.enemyFlashDurationPerRound.toFixed(2)}s`} sub={`${player.enemiesFlashed} enemies`} colorClass="text-emerald-400" />
+          <MiniStat label="Team Flash" value={player.teamFlashCount} sub={`${player.teamFlashDurationPerRound.toFixed(2)}s/rd`} colorClass="text-red-400" />
+          <MiniStat label="Smokes" value={player.smokesThrown} />
+          <MiniStat label="HEs" value={player.hesThrown} colorClass="text-orange-400" />
+          <MiniStat label="Mollies" value={player.molotovsThrown} colorClass="text-red-400" />
+          <MiniStat label="Total Nades" value={player.totalNadesThrown} colorClass="text-neon-cyan" />
+        </div>
+      </CollapsibleSection>
     </div>
   );
 }
