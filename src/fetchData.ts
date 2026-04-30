@@ -1,7 +1,20 @@
-import type { PlayerStats, GroupedPlayer } from './types';
+import type { PlayerStats, GroupedPlayer, MatchPlayer, PlayerTierBreakdown, TierBreakdown, MatchWithTiers } from './types';
 import { fetchAllPlayers, type CscPlayer } from './fetchFranchises';
 
 const API_BASE = 'https://fragg-3-0-api.vercel.app/player-stats';
+const CACHE_DURATION_MS = 10 * 60 * 1000;
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const playerStatsCache = new Map<number, CacheEntry<GroupedPlayer[]>>();
+
+function isCacheValid<T>(entry: CacheEntry<T> | undefined): entry is CacheEntry<T> {
+  if (!entry) return false;
+  return Date.now() - entry.timestamp < CACHE_DURATION_MS;
+}
 
 function mapApiToStats(api: Record<string, unknown>): PlayerStats {
   const mk = (api.multi_kills as Record<string, number> | undefined) ?? {};
@@ -205,6 +218,12 @@ function mapApiToStats(api: Record<string, unknown>): PlayerStats {
 }
 
 export async function fetchPlayerStats(season?: number): Promise<GroupedPlayer[]> {
+  const seasonKey = season ?? 0;
+  const cached = playerStatsCache.get(seasonKey);
+  if (isCacheValid(cached)) {
+    return cached.data;
+  }
+
   const seasonParam = season != null ? `&season=${season}` : '';
   const [regResponse, combineResponse, cscPlayers] = await Promise.all([
     fetch(`${API_BASE}/aggregated?type=regulation${seasonParam}`),
@@ -285,5 +304,111 @@ export async function fetchPlayerStats(season?: number): Promise<GroupedPlayer[]
     }
   }
 
-  return Array.from(map.values());
+  const result = Array.from(map.values());
+  playerStatsCache.set(seasonKey, { data: result, timestamp: Date.now() });
+  return result;
+}
+
+const matchCache = new Map<string, CacheEntry<MatchPlayer[]>>();
+const playerMatchListCache = new Map<string, CacheEntry<{ matchId: string; type: string; season: number }[]>>();
+
+export async function fetchPlayerMatches(
+  steamId: string,
+  type: string,
+  season: number,
+): Promise<PlayerTierBreakdown> {
+  const cscPlayers = await fetchAllPlayers().catch(() => [] as CscPlayer[]);
+  const tierMap = new Map<string, string>();
+  for (const p of cscPlayers) {
+    if (p.tier?.name) {
+      tierMap.set(p.steam64Id, p.tier.name);
+    }
+  }
+
+  let allMatches: { matchId: string; type: string; season: number }[];
+  const listCached = playerMatchListCache.get(steamId);
+  if (isCacheValid(listCached)) {
+    allMatches = listCached.data;
+  } else {
+    const playerRes = await fetch(`${API_BASE}/player/${steamId}`);
+    const playerData = await playerRes.json();
+    const results: Record<string, unknown>[] = playerData.results ?? [];
+    allMatches = results.map((r) => ({
+      matchId: String(r.match_id ?? ''),
+      type: String(r.type ?? ''),
+      season: Number(r.season ?? 0),
+    })).filter((m) => m.matchId);
+    playerMatchListCache.set(steamId, { data: allMatches, timestamp: Date.now() });
+  }
+
+  const filteredMatches = allMatches.filter((m) => m.type === type && m.season === season);
+  const matchIds = [...new Set(filteredMatches.map((m) => m.matchId))];
+
+  const matchPlayers: MatchWithTiers[] = [];
+
+  await Promise.all(
+    matchIds.map(async (matchId) => {
+      let players: MatchPlayer[];
+      const matchCached = matchCache.get(matchId);
+      if (isCacheValid(matchCached)) {
+        players = matchCached.data;
+      } else {
+        const matchRes = await fetch(`${API_BASE}/match/${matchId}`);
+        const matchData = await matchRes.json();
+        const results: Record<string, unknown>[] = matchData.results ?? [];
+        players = results.map((r) => ({
+          steamId: String(r.steam_id ?? ''),
+          name: String(r.name ?? ''),
+          teamName: String(r.team_name ?? ''),
+        }));
+        matchCache.set(matchId, { data: players, timestamp: Date.now() });
+      }
+
+      const teams = new Set(players.map((p) => p.teamName));
+      const teamArray = [...teams];
+      const teamA = teamArray[0] ?? '';
+      const teamB = teamArray[1] ?? '';
+
+      const matchTierCounts = new Map<string, number>();
+      const playersWithTiers = players.map((p) => {
+        const tier = tierMap.get(p.steamId) ?? null;
+        matchTierCounts.set(tier ?? 'Unknown', (matchTierCounts.get(tier ?? 'Unknown') ?? 0) + 1);
+        return { ...p, tier };
+      });
+
+      const totalInMatch = playersWithTiers.length;
+      const matchBreakdown: TierBreakdown[] = [];
+      for (const [tier, count] of matchTierCounts) {
+        matchBreakdown.push({ tier, count, pct: count / totalInMatch });
+      }
+      matchBreakdown.sort((a, b) => b.count - a.count);
+
+      matchPlayers.push({
+        matchId,
+        teamA,
+        teamB,
+        players: playersWithTiers,
+        tierBreakdown: matchBreakdown,
+      });
+    })
+  );
+
+  matchPlayers.sort((a, b) => a.matchId.localeCompare(b.matchId));
+
+  const overallCounts = new Map<string, number>();
+  let totalPlayers = 0;
+  for (const m of matchPlayers) {
+    for (const tb of m.tierBreakdown) {
+      overallCounts.set(tb.tier, (overallCounts.get(tb.tier) ?? 0) + tb.count);
+      totalPlayers += tb.count;
+    }
+  }
+
+  const overall: TierBreakdown[] = [];
+  for (const [tier, count] of overallCounts) {
+    overall.push({ tier, count, pct: totalPlayers > 0 ? count / totalPlayers : 0 });
+  }
+  overall.sort((a, b) => b.pct - a.pct);
+
+  return { overall, matches: matchPlayers, totalPlayers };
 }

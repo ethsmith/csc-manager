@@ -206,3 +206,29 @@ export interface PlayerStats {
   overpassRating: number;
   overpassGames: number;
 }
+
+export interface MatchPlayer {
+  steamId: string;
+  name: string;
+  teamName: string;
+}
+
+export interface TierBreakdown {
+  tier: string;
+  count: number;
+  pct: number;
+}
+
+export interface MatchWithTiers {
+  matchId: string;
+  teamA: string;
+  teamB: string;
+  players: (MatchPlayer & { tier: string | null })[];
+  tierBreakdown: TierBreakdown[];
+}
+
+export interface PlayerTierBreakdown {
+  overall: TierBreakdown[];
+  matches: MatchWithTiers[];
+  totalPlayers: number;
+}

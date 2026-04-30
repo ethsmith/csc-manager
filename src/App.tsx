@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, useParams, useNavigate } from 'react-router-dom';
-import type { GroupedPlayer, StatMode } from './types';
-import { fetchPlayerStats } from './fetchData';
+import type { GroupedPlayer, StatMode, PlayerTierBreakdown } from './types';
+import { fetchPlayerStats, fetchPlayerMatches } from './fetchData';
 import Navbar from './components/Navbar';
 import PlayerList from './components/PlayerList';
 import PlayerDashboard from './components/PlayerDashboard';
@@ -27,12 +27,28 @@ function PlayersListPage({ players }: { players: GroupedPlayer[] }) {
   );
 }
 
-function PlayerDetailPage({ players }: { players: GroupedPlayer[] }) {
+function PlayerDetailPage({ players, season }: { players: GroupedPlayer[]; season: number }) {
   const { steamId } = useParams<{ steamId: string }>();
   const navigate = useNavigate();
   const [mode, setMode] = useState<StatMode>('regulation');
+  const [tierBreakdown, setTierBreakdown] = useState<PlayerTierBreakdown | null>(null);
 
   const player = players.find((p) => p.steamId === steamId);
+
+  useEffect(() => {
+    if (!steamId) return;
+    let cancelled = false;
+    setTierBreakdown(null);
+    fetchPlayerMatches(steamId, mode, season)
+      .then((data) => {
+        if (cancelled) return;
+        setTierBreakdown(data);
+      })
+      .catch(() => {
+        if (cancelled) return;
+      });
+    return () => { cancelled = true; };
+  }, [steamId, mode, season]);
 
   if (!player) {
     return (
@@ -60,6 +76,7 @@ function PlayerDetailPage({ players }: { players: GroupedPlayer[] }) {
         mode={mode}
         onModeChange={setMode}
         onBack={() => navigate('/players')}
+        tierBreakdown={tierBreakdown}
       />
     </div>
   );
@@ -169,7 +186,7 @@ function App() {
           <Routes>
             <Route path="/" element={<PlayersListPage players={players} />} />
             <Route path="/players" element={<PlayersListPage players={players} />} />
-            <Route path="/players/:steamId" element={<PlayerDetailPage players={players} />} />
+            <Route path="/players/:steamId" element={<PlayerDetailPage players={players} season={season} />} />
             <Route path="/teams" element={<TeamsPage players={players} />} />
             <Route path="/leaderboard" element={<LeaderboardPage players={players} />} />
             <Route path="/archetypes" element={<ArchetypesPage players={players} />} />

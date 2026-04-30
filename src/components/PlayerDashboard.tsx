@@ -16,7 +16,7 @@ import {
   Swords,
   HandHelping,
 } from 'lucide-react';
-import type { PlayerStats, GroupedPlayer, StatMode } from '../types';
+import type { PlayerStats, GroupedPlayer, StatMode, PlayerTierBreakdown } from '../types';
 import StatCard from './StatCard';
 import PerformanceRadar from './RadarChart';
 import KillDistribution from './KillDistribution';
@@ -24,6 +24,7 @@ import SideComparison from './SideComparison';
 import MapRatings from './MapRatings';
 import ModeToggle from './ModeToggle';
 import HLTVRatingCards from './HLTVRatingCards';
+import TierBreakdown from './TierBreakdown';
 import { statRanges, getStatColor } from '../statRanges';
 
 interface StatItemProps {
@@ -71,6 +72,7 @@ interface Props {
   mode: StatMode;
   onModeChange: (mode: StatMode) => void;
   onBack: () => void;
+  tierBreakdown: PlayerTierBreakdown | null;
 }
 
 function ratingColor(rating: number): string {
@@ -99,7 +101,7 @@ function getAllStatsForMode(allPlayers: GroupedPlayer[], mode: StatMode): Player
   return result;
 }
 
-export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode, onModeChange, onBack }: Props) {
+export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode, onModeChange, onBack, tierBreakdown }: Props) {
   const player = getEntry(groupedPlayer, mode);
 
   const allPlayers = useMemo(
@@ -205,6 +207,9 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
 
       {/* HLTV-Style Rating Cards */}
       <HLTVRatingCards player={player} tierPlayers={tierPlayers} />
+
+      {/* Tier Breakdown */}
+      {tierBreakdown && <TierBreakdown tierBreakdown={tierBreakdown} />}
 
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
