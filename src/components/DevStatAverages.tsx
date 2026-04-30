@@ -7,7 +7,7 @@ interface Props {
   players: GroupedPlayer[];
 }
 
-type StatKey = keyof Omit<PlayerStats, 'steamId' | 'name' | 'tier'>;
+type StatKey = keyof Omit<PlayerStats, 'steamId' | 'name' | 'teamName'>;
 
 const statKeys: StatKey[] = [
   'games', 'finalRating', 'hltvRating', 'roundsPlayed', 'roundsWon', 'roundsLost',
@@ -95,11 +95,10 @@ export default function DevStatAverages({ players }: Props) {
       if (tierFilter !== 'all' && p.cscTier !== tierFilter) return;
       
       // Only use regulation stats
-      p.regulation.forEach(entry => {
-        // Filter by minimum games
-        if (entry.stats.games < minGames) return;
-        allStats.push(entry.stats);
-      });
+      if (p.regulation) {
+        if (p.regulation.games < minGames) return;
+        allStats.push(p.regulation);
+      }
     });
 
     if (allStats.length === 0) return [];

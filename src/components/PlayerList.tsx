@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Search, ChevronDown, ChevronUp, Users, Trophy, Filter, Plus, X, SlidersHorizontal, UserCheck } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, Users, Trophy, Filter, Plus, X, SlidersHorizontal } from 'lucide-react';
 import type { GroupedPlayer, StatMode, PlayerStats } from '../types';
 import { getPlayerTypeLabel, getPlayerTypeColor, type PlayerType } from '../fetchFranchises';
 import ModeToggle from './ModeToggle';
@@ -34,7 +34,7 @@ interface StatFieldDef {
 const STAT_FIELDS: StatFieldDef[] = [
   // Identity
   { key: 'name', label: 'Name', type: 'string', group: 'Identity' },
-  { key: 'tier', label: 'Tier', type: 'string', group: 'Identity' },
+  { key: 'teamName', label: 'Team', type: 'string', group: 'Identity' },
   { key: 'steamId', label: 'Steam ID', type: 'string', group: 'Identity' },
   // Core
   { key: 'games', label: 'Games', type: 'number', group: 'Core' },
@@ -249,7 +249,7 @@ function getTierRank(tier: string): number {
 
 const TABLE_COLUMNS: { key: keyof PlayerStats | 'playerName'; label: string; sortable: boolean }[] = [
   { key: 'playerName', label: 'Player', sortable: true },
-  { key: 'tier', label: 'Tier', sortable: true },
+  { key: 'teamName', label: 'Tier', sortable: true },
   { key: 'games', label: 'Games', sortable: true },
   { key: 'finalRating', label: 'Rating', sortable: true },
   { key: 'kills', label: 'Kills', sortable: true },
@@ -262,16 +262,12 @@ function ratingColor(rating: number): string {
 }
 
 function getBestEntry(gp: GroupedPlayer, mode: StatMode): PlayerStats | null {
-  const entries = mode === 'regulation' ? gp.regulation : gp.scrim;
-  if (entries.length === 0) return null;
-  return entries.reduce((best, cur) =>
-    cur.stats.finalRating > best.stats.finalRating ? cur : best
-  ).stats;
+  return gp[mode];
 }
 
 function getTiers(gp: GroupedPlayer, mode: StatMode): string[] {
-  const entries = mode === 'regulation' ? gp.regulation : gp.scrim;
-  return [...new Set(entries.map((e) => e.tier))];
+  const stats = gp[mode];
+  return stats && stats.teamName ? [stats.teamName] : [];
 }
 
 function applyNumOp(val: number, op: NumOp, target: number): boolean {
@@ -394,8 +390,8 @@ export default function PlayerList({ players, mode, onModeChange, onSelect }: Pr
       );
     }
 
-    // Apply CSC tier filter (only in regulation mode)
-    if (mode === 'regulation' && cscTierFilter !== 'all') {
+    // Apply CSC tier filter
+    if (cscTierFilter !== 'all') {
       result = result.filter(({ gp }) =>
         gp.cscTier?.toLowerCase() === cscTierFilter.toLowerCase()
       );
@@ -414,7 +410,7 @@ export default function PlayerList({ players, mode, onModeChange, onSelect }: Pr
         ({ gp, stats }) =>
           gp.name.toLowerCase().includes(q) ||
           stats.name.toLowerCase().includes(q) ||
-          stats.tier.toLowerCase().includes(q) ||
+          stats.teamName.toLowerCase().includes(q) ||
           gp.steamId.includes(q)
       );
     }
@@ -429,8 +425,8 @@ export default function PlayerList({ players, mode, onModeChange, onSelect }: Pr
       let cmp = 0;
       if (sortKey === 'name') {
         cmp = a.gp.name.localeCompare(b.gp.name);
-      } else if (sortKey === 'tier') {
-        cmp = (a.stats.tier as string).localeCompare(b.stats.tier as string);
+      } else if (sortKey === 'teamName') {
+        cmp = (a.stats.teamName as string).localeCompare(b.stats.teamName as string);
       } else {
         cmp = (a.stats[sortKey] as number) - (b.stats[sortKey] as number);
       }
@@ -502,19 +498,17 @@ export default function PlayerList({ players, mode, onModeChange, onSelect }: Pr
             className="w-full pl-10 pr-4 py-3 rounded-xl glass text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-neon-blue/40 transition-all neon-border-hover"
           />
         </div>
-        {mode === 'regulation' && cscTiers.length > 1 && (
-          <select
-            value={cscTierFilter}
-            onChange={(e) => setCscTierFilter(e.target.value)}
-            className="glass rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon-blue/40 cursor-pointer neon-border-hover appearance-none min-w-[160px]"
-          >
-            {cscTiers.map((t) => (
-              <option key={t} value={t} className="bg-dark-800">
-                {t === 'all' ? '🎯 All CSC Tiers' : t}
-              </option>
-            ))}
-          </select>
-        )}
+        <select
+          value={cscTierFilter}
+          onChange={(e) => setCscTierFilter(e.target.value)}
+          className="glass rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon-blue/40 cursor-pointer neon-border-hover appearance-none min-w-[160px]"
+        >
+          {cscTiers.map((t) => (
+            <option key={t} value={t} className="bg-dark-800">
+              {t === 'all' ? '🎯 All Tiers' : t}
+            </option>
+          ))}
+        </select>
         {mode === 'regulation' && playerTypes.length > 1 && (
           <select
             value={playerTypeFilter}
@@ -692,7 +686,7 @@ export default function PlayerList({ players, mode, onModeChange, onSelect }: Pr
                       onClick={() => toggleSort(actualSortKey)}
                       className="px-4 py-3 text-left text-xs uppercase tracking-wider text-slate-400 cursor-pointer hover:text-neon-blue transition-colors select-none whitespace-nowrap"
                     >
-                      {key === 'tier' && mode === 'scrim' ? 'Scrim Team' : label}
+                      {label}
                       <SortIcon col={actualSortKey} />
                     </th>
                   );
@@ -722,12 +716,8 @@ export default function PlayerList({ players, mode, onModeChange, onSelect }: Pr
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2.5 py-1 rounded-full border whitespace-nowrap font-medium ${
-                      mode === 'scrim'
-                        ? 'bg-neon-purple/15 text-neon-purple border-neon-purple/30'
-                        : 'bg-neon-blue/15 text-neon-blue border-neon-blue/30'
-                    }`}>
-                      {stats.tier}
+                    <span className="text-xs px-2.5 py-1 rounded-full border whitespace-nowrap font-medium bg-neon-blue/15 text-neon-blue border-neon-blue/30">
+                      {gp.cscTier ?? '-'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-slate-300">{stats.games}</td>

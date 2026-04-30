@@ -1,239 +1,220 @@
-import Papa from 'papaparse';
 import type { PlayerStats, GroupedPlayer } from './types';
 import { fetchAllPlayers, type CscPlayer } from './fetchFranchises';
 
-const SHEET_CSV_URL =
-  'https://docs.google.com/spreadsheets/d/1lcZ80NLIG2vLQvS7G3zL8tPcc6_iV24PG_V-ZmZNWHo/gviz/tq?tqx=out:csv&gid=289298243';
+const API_BASE = 'https://fragg-3-0-api.vercel.app/player-stats';
 
-function num(val: string | undefined): number {
-  if (!val || val.trim() === '') return 0;
-  const n = parseFloat(val);
-  return isNaN(n) ? 0 : n;
-}
-
-function isScrimTier(tier: string): boolean {
-  return tier.toLowerCase().startsWith('team_');
-}
-
-function parseRow(r: string[]): PlayerStats | null {
-  if (!r[0] || !r[1]) return null;
+function mapApiToStats(api: Record<string, unknown>): PlayerStats {
+  const mk = (api.multi_kills as Record<string, number> | undefined) ?? {};
   return {
-    steamId: r[0] ?? '',
-    name: r[1] ?? '',
-    tier: r[2] ?? '',
-        games: num(r[3]),
-        finalRating: num(r[4]),
-        hltvRating: num(r[5]),
-        roundsPlayed: num(r[6]),
-        roundsWon: num(r[7]),
-        roundsLost: num(r[8]),
-        kills: num(r[9]),
-        assists: num(r[10]),
-        deaths: num(r[11]),
-        damage: num(r[12]),
-        adr: num(r[13]),
-        kpr: num(r[14]),
-        dpr: num(r[15]),
-        kast: num(r[16]),
-        survival: num(r[17]),
-        headshots: num(r[18]),
-        headshotPct: num(r[19]),
-        avgTimeToKill: num(r[20]),
-        openingKills: num(r[21]),
-        openingDeaths: num(r[22]),
-        openingAttempts: num(r[23]),
-        openingSuccesses: num(r[24]),
-        openingKillsPerRound: num(r[25]),
-        openingDeathsPerRound: num(r[26]),
-        openingAttemptsPct: num(r[27]),
-        openingSuccessPct: num(r[28]),
-        roundsWonAfterOpening: num(r[29]),
-        winPctAfterOpeningKill: num(r[30]),
-        ecoKillValue: num(r[31]),
-        ecoDeathValue: num(r[32]),
-        duelSwing: num(r[33]),
-        duelSwingPerRound: num(r[34]),
-        econImpact: num(r[35]),
-        roundImpact: num(r[36]),
-        probabilitySwing: num(r[37]),
-        probabilitySwingPerRound: num(r[38]),
-        clutchRounds: num(r[39]),
-        clutchWins: num(r[40]),
-        clutchPointsPerRound: num(r[41]),
-        clutch1v1Attempts: num(r[42]),
-        clutch1v1Wins: num(r[43]),
-        clutch1v1WinPct: num(r[44]),
-        tradeKills: num(r[45]),
-        tradeKillsPerRound: num(r[46]),
-        tradeKillsPct: num(r[47]),
-        fastTrades: num(r[48]),
-        tradedDeaths: num(r[49]),
-        tradedDeathsPerRound: num(r[50]),
-        tradedDeathsPct: num(r[51]),
-        tradeDenials: num(r[52]),
-        savedByTeammate: num(r[53]),
-        savedByTeammatePerRound: num(r[54]),
-        savedTeammate: num(r[55]),
-        savedTeammatePerRound: num(r[56]),
-        openingDeathsTraded: num(r[57]),
-        openingDeathsTradedPct: num(r[58]),
-        awpKills: num(r[59]),
-        awpKillsPerRound: num(r[60]),
-        awpKillsPct: num(r[61]),
-        roundsWithAwpKill: num(r[62]),
-        roundsWithAwpKillPct: num(r[63]),
-        awpMultiKillRounds: num(r[64]),
-        awpMultiKillRoundsPerRound: num(r[65]),
-        awpOpeningKills: num(r[66]),
-        awpOpeningKillsPerRound: num(r[67]),
-        awpDeaths: num(r[68]),
-        awpDeathsNoKill: num(r[69]),
-        oneK: num(r[70]),
-        twoK: num(r[71]),
-        threeK: num(r[72]),
-        fourK: num(r[73]),
-        fiveK: num(r[74]),
-        roundsWithKill: num(r[75]),
-        roundsWithKillPct: num(r[76]),
-        roundsWithMultiKill: num(r[77]),
-        roundsWithMultiKillPct: num(r[78]),
-        killsInWonRounds: num(r[79]),
-        killsPerRoundWin: num(r[80]),
-        damageInWonRounds: num(r[81]),
-        damagePerRoundWin: num(r[82]),
-        perfectKills: num(r[83]),
-        damagePerKill: num(r[84]),
-        knifeKills: num(r[85]),
-        pistolVsRifleKills: num(r[86]),
-        supportRounds: num(r[87]),
-        supportRoundsPct: num(r[88]),
-        assistedKills: num(r[89]),
-        assistedKillsPct: num(r[90]),
-        assistsPerRound: num(r[91]),
-        attackRounds: num(r[92]),
-        attacksPerRound: num(r[93]),
-        timeAlivePerRound: num(r[94]),
-        lastAliveRounds: num(r[95]),
-        lastAlivePct: num(r[96]),
-        savesOnLoss: num(r[97]),
-        savesPerRoundLoss: num(r[98]),
-        utilityDamage: num(r[99]),
-        utilityDamagePerRound: num(r[100]),
-        utilityKills: num(r[101]),
-        utilityKillsPer100Rounds: num(r[102]),
-        flashesThrown: num(r[103]),
-        flashesThrownPerRound: num(r[104]),
-        flashAssists: num(r[105]),
-        flashAssistsPerRound: num(r[106]),
-        enemyFlashDurationPerRound: num(r[107]),
-        teamFlashCount: num(r[108]),
-        teamFlashDurationPerRound: num(r[109]),
-        exitFrags: num(r[110]),
-        earlyDeaths: num(r[111]),
-        manAdvantageKills: num(r[112]),
-        manAdvantageKillsPct: num(r[113]),
-        manDisadvantageDeaths: num(r[114]),
-        manDisadvantageDeathsPct: num(r[115]),
-        lowBuyKills: num(r[116]),
-        lowBuyKillsPct: num(r[117]),
-        disadvantagedBuyKills: num(r[118]),
-        disadvantagedBuyKillsPct: num(r[119]),
-        pistolRoundsPlayed: num(r[120]),
-        pistolRoundKills: num(r[121]),
-        pistolRoundDeaths: num(r[122]),
-        pistolRoundDamage: num(r[123]),
-        pistolRoundsWon: num(r[124]),
-        pistolRoundSurvivals: num(r[125]),
-        pistolRoundMultiKills: num(r[126]),
-        pistolRoundRating: num(r[127]),
-        tRoundsPlayed: num(r[128]),
-        tKills: num(r[129]),
-        tDeaths: num(r[130]),
-        tDamage: num(r[131]),
-        tSurvivals: num(r[132]),
-        tRoundsWithMultiKill: num(r[133]),
-        tEcoKillValue: num(r[134]),
-        tKast: num(r[135]),
-        tClutchRounds: num(r[136]),
-        tClutchWins: num(r[137]),
-        tManAdvantageKills: num(r[138]),
-        tManAdvantageKillsPct: num(r[139]),
-        tManDisadvantageDeaths: num(r[140]),
-        tManDisadvantageDeathsPct: num(r[141]),
-        tRating: num(r[142]),
-        tEcoRating: num(r[143]),
-        ctRoundsPlayed: num(r[144]),
-        ctKills: num(r[145]),
-        ctDeaths: num(r[146]),
-        ctDamage: num(r[147]),
-        ctSurvivals: num(r[148]),
-        ctRoundsWithMultiKill: num(r[149]),
-        ctEcoKillValue: num(r[150]),
-        ctKast: num(r[151]),
-        ctClutchRounds: num(r[152]),
-        ctClutchWins: num(r[153]),
-        ctManAdvantageKills: num(r[154]),
-        ctManAdvantageKillsPct: num(r[155]),
-        ctManDisadvantageDeaths: num(r[156]),
-        ctManDisadvantageDeathsPct: num(r[157]),
-        ctRating: num(r[158]),
-        ctEcoRating: num(r[159]),
-        clutch1v2Attempts: num(r[160]),
-        clutch1v2Wins: num(r[161]),
-        clutch1v3Attempts: num(r[162]),
-        clutch1v3Wins: num(r[163]),
-        clutch1v4Attempts: num(r[164]),
-        clutch1v4Wins: num(r[165]),
-        clutch1v5Attempts: num(r[166]),
-        clutch1v5Wins: num(r[167]),
-        smokesThrown: num(r[168]),
-        hesThrown: num(r[169]),
-        molotovsThrown: num(r[170]),
-        totalNadesThrown: num(r[171]),
-        heDamage: num(r[172]),
-        fireDamage: num(r[173]),
-        damageTaken: num(r[174]),
-        avgTimeToDeath: num(r[175]),
-        tOpeningKills: num(r[176]),
-        tOpeningDeaths: num(r[177]),
-        ctOpeningKills: num(r[178]),
-        ctOpeningDeaths: num(r[179]),
-        enemiesFlashed: num(r[180]),
-        ancientRating: num(r[181]),
-        ancientGames: num(r[182]),
-        anubisRating: num(r[183]),
-        anubisGames: num(r[184]),
-        dust2Rating: num(r[185]),
-        dust2Games: num(r[186]),
-        infernoRating: num(r[187]),
-        infernoGames: num(r[188]),
-        mirageRating: num(r[189]),
-        mirageGames: num(r[190]),
-        nukeRating: num(r[191]),
-        nukeGames: num(r[192]),
-        overpassRating: num(r[193]),
-        overpassGames: num(r[194]),
+    steamId: String(api.steam_id ?? ''),
+    name: String(api.name ?? ''),
+    teamName: String(api.team_name ?? ''),
+    games: Number(api.games ?? 0),
+    finalRating: Number(api.final_rating ?? 0),
+    hltvRating: Number(api.hltv_rating ?? 0),
+    roundsPlayed: Number(api.rounds_played ?? 0),
+    roundsWon: Number(api.rounds_won ?? 0),
+    roundsLost: Number(api.rounds_lost ?? 0),
+    kills: Number(api.kills ?? 0),
+    assists: Number(api.assists ?? 0),
+    deaths: Number(api.deaths ?? 0),
+    damage: Number(api.damage ?? 0),
+    adr: Number(api.adr ?? 0),
+    kpr: Number(api.kpr ?? 0),
+    dpr: Number(api.dpr ?? 0),
+    kast: Number(api.kast ?? 0),
+    survival: Number(api.survival ?? 0),
+    headshots: Number(api.headshots ?? 0),
+    headshotPct: Number(api.headshot_pct ?? 0),
+    avgTimeToKill: Number(api.avg_time_to_kill ?? 0),
+    openingKills: Number(api.opening_kills ?? 0),
+    openingDeaths: Number(api.opening_deaths ?? 0),
+    openingAttempts: Number(api.opening_attempts ?? 0),
+    openingSuccesses: Number(api.opening_successes ?? 0),
+    openingKillsPerRound: Number(api.opening_kills_per_round ?? 0),
+    openingDeathsPerRound: Number(api.opening_deaths_per_round ?? 0),
+    openingAttemptsPct: Number(api.opening_attempts_pct ?? 0),
+    openingSuccessPct: Number(api.opening_success_pct ?? 0),
+    roundsWonAfterOpening: Number(api.rounds_won_after_opening ?? 0),
+    winPctAfterOpeningKill: Number(api.win_pct_after_opening_kill ?? 0),
+    ecoKillValue: Number(api.eco_kill_value ?? 0),
+    ecoDeathValue: Number(api.eco_death_value ?? 0),
+    duelSwing: Number(api.duel_swing ?? 0),
+    duelSwingPerRound: Number(api.duel_swing_per_round ?? 0),
+    econImpact: Number(api.econ_impact ?? 0),
+    roundImpact: Number(api.round_impact ?? 0),
+    probabilitySwing: Number(api.probability_swing ?? 0),
+    probabilitySwingPerRound: Number(api.probability_swing_per_round ?? 0),
+    clutchRounds: Number(api.clutch_rounds ?? 0),
+    clutchWins: Number(api.clutch_wins ?? 0),
+    clutchPointsPerRound: Number(api.clutch_points_per_round ?? 0),
+    clutch1v1Attempts: Number(api.clutch_1v1_attempts ?? 0),
+    clutch1v1Wins: Number(api.clutch_1v1_wins ?? 0),
+    clutch1v1WinPct: Number(api.clutch_1v1_win_pct ?? 0),
+    tradeKills: Number(api.trade_kills ?? 0),
+    tradeKillsPerRound: Number(api.trade_kills_per_round ?? 0),
+    tradeKillsPct: Number(api.trade_kills_pct ?? 0),
+    fastTrades: Number(api.fast_trades ?? 0),
+    tradedDeaths: Number(api.traded_deaths ?? 0),
+    tradedDeathsPerRound: Number(api.traded_deaths_per_round ?? 0),
+    tradedDeathsPct: Number(api.traded_deaths_pct ?? 0),
+    tradeDenials: Number(api.trade_denials ?? 0),
+    savedByTeammate: Number(api.saved_by_teammate ?? 0),
+    savedByTeammatePerRound: Number(api.saved_by_teammate_per_round ?? 0),
+    savedTeammate: Number(api.saved_teammate ?? 0),
+    savedTeammatePerRound: Number(api.saved_teammate_per_round ?? 0),
+    openingDeathsTraded: Number(api.opening_deaths_traded ?? 0),
+    openingDeathsTradedPct: Number(api.opening_deaths_traded_pct ?? 0),
+    awpKills: Number(api.awp_kills ?? 0),
+    awpKillsPerRound: Number(api.awp_kills_per_round ?? 0),
+    awpKillsPct: Number(api.awp_kills_pct ?? 0),
+    roundsWithAwpKill: Number(api.rounds_with_awp_kill ?? 0),
+    roundsWithAwpKillPct: Number(api.rounds_with_awp_kill_pct ?? 0),
+    awpMultiKillRounds: Number(api.awp_multi_kill_rounds ?? 0),
+    awpMultiKillRoundsPerRound: Number(api.awp_multi_kill_rounds_per_round ?? 0),
+    awpOpeningKills: Number(api.awp_opening_kills ?? 0),
+    awpOpeningKillsPerRound: Number(api.awp_opening_kills_per_round ?? 0),
+    awpDeaths: Number(api.awp_deaths ?? 0),
+    awpDeathsNoKill: Number(api.awp_deaths_no_kill ?? 0),
+    oneK: Number(mk['1k'] ?? 0),
+    twoK: Number(mk['2k'] ?? 0),
+    threeK: Number(mk['3k'] ?? 0),
+    fourK: Number(mk['4k'] ?? 0),
+    fiveK: Number(mk['5k'] ?? 0),
+    roundsWithKill: Number(api.rounds_with_kill ?? 0),
+    roundsWithKillPct: Number(api.rounds_with_kill_pct ?? 0),
+    roundsWithMultiKill: Number(api.rounds_with_multi_kill ?? 0),
+    roundsWithMultiKillPct: Number(api.rounds_with_multi_kill_pct ?? 0),
+    killsInWonRounds: Number(api.kills_in_won_rounds ?? 0),
+    killsPerRoundWin: Number(api.kills_per_round_win ?? 0),
+    damageInWonRounds: Number(api.damage_in_won_rounds ?? 0),
+    damagePerRoundWin: Number(api.damage_per_round_win ?? 0),
+    perfectKills: Number(api.perfect_kills ?? 0),
+    damagePerKill: Number(api.damage_per_kill ?? 0),
+    knifeKills: Number(api.knife_kills ?? 0),
+    pistolVsRifleKills: Number(api.pistol_vs_rifle_kills ?? 0),
+    supportRounds: Number(api.support_rounds ?? 0),
+    supportRoundsPct: Number(api.support_rounds_pct ?? 0),
+    assistedKills: Number(api.assisted_kills ?? 0),
+    assistedKillsPct: Number(api.assisted_kills_pct ?? 0),
+    assistsPerRound: Number(api.assists_per_round ?? 0),
+    attackRounds: Number(api.attack_rounds ?? 0),
+    attacksPerRound: Number(api.attacks_per_round ?? 0),
+    timeAlivePerRound: Number(api.time_alive_per_round ?? 0),
+    lastAliveRounds: Number(api.last_alive_rounds ?? 0),
+    lastAlivePct: Number(api.last_alive_pct ?? 0),
+    savesOnLoss: Number(api.saves_on_loss ?? 0),
+    savesPerRoundLoss: Number(api.saves_per_round_loss ?? 0),
+    utilityDamage: Number(api.utility_damage ?? 0),
+    utilityDamagePerRound: Number(api.utility_damage_per_round ?? 0),
+    utilityKills: Number(api.utility_kills ?? 0),
+    utilityKillsPer100Rounds: Number(api.utility_kills_per_100_rounds ?? 0),
+    flashesThrown: Number(api.flashes_thrown ?? 0),
+    flashesThrownPerRound: Number(api.flashes_thrown_per_round ?? 0),
+    flashAssists: Number(api.flash_assists ?? 0),
+    flashAssistsPerRound: Number(api.flash_assists_per_round ?? 0),
+    enemyFlashDurationPerRound: Number(api.enemy_flash_duration_per_round ?? 0),
+    teamFlashCount: Number(api.team_flash_count ?? 0),
+    teamFlashDurationPerRound: Number(api.team_flash_duration_per_round ?? 0),
+    exitFrags: Number(api.exit_frags ?? 0),
+    earlyDeaths: Number(api.early_deaths ?? 0),
+    manAdvantageKills: Number(api.man_advantage_kills ?? 0),
+    manAdvantageKillsPct: Number(api.man_advantage_kills_pct ?? 0),
+    manDisadvantageDeaths: Number(api.man_disadvantage_deaths ?? 0),
+    manDisadvantageDeathsPct: Number(api.man_disadvantage_deaths_pct ?? 0),
+    lowBuyKills: Number(api.low_buy_kills ?? 0),
+    lowBuyKillsPct: Number(api.low_buy_kills_pct ?? 0),
+    disadvantagedBuyKills: Number(api.disadvantaged_buy_kills ?? 0),
+    disadvantagedBuyKillsPct: Number(api.disadvantaged_buy_kills_pct ?? 0),
+    pistolRoundsPlayed: Number(api.pistol_rounds_played ?? 0),
+    pistolRoundKills: Number(api.pistol_round_kills ?? 0),
+    pistolRoundDeaths: Number(api.pistol_round_deaths ?? 0),
+    pistolRoundDamage: Number(api.pistol_round_damage ?? 0),
+    pistolRoundsWon: Number(api.pistol_rounds_won ?? 0),
+    pistolRoundSurvivals: Number(api.pistol_round_survivals ?? 0),
+    pistolRoundMultiKills: Number(api.pistol_round_multi_kills ?? 0),
+    pistolRoundRating: Number(api.pistol_round_rating ?? 0),
+    tRoundsPlayed: Number(api.t_rounds_played ?? 0),
+    tKills: Number(api.t_kills ?? 0),
+    tDeaths: Number(api.t_deaths ?? 0),
+    tDamage: Number(api.t_damage ?? 0),
+    tSurvivals: Number(api.t_survivals ?? 0),
+    tRoundsWithMultiKill: Number(api.t_rounds_with_multi_kill ?? 0),
+    tEcoKillValue: Number(api.t_eco_kill_value ?? 0),
+    tKast: Number(api.t_kast ?? 0),
+    tClutchRounds: Number(api.t_clutch_rounds ?? 0),
+    tClutchWins: Number(api.t_clutch_wins ?? 0),
+    tManAdvantageKills: Number(api.t_man_advantage_kills ?? 0),
+    tManAdvantageKillsPct: Number(api.t_man_advantage_kills_pct ?? 0),
+    tManDisadvantageDeaths: Number(api.t_man_disadvantage_deaths ?? 0),
+    tManDisadvantageDeathsPct: Number(api.t_man_disadvantage_deaths_pct ?? 0),
+    tRating: Number(api.t_rating ?? 0),
+    tEcoRating: Number(api.t_eco_rating ?? 0),
+    ctRoundsPlayed: Number(api.ct_rounds_played ?? 0),
+    ctKills: Number(api.ct_kills ?? 0),
+    ctDeaths: Number(api.ct_deaths ?? 0),
+    ctDamage: Number(api.ct_damage ?? 0),
+    ctSurvivals: Number(api.ct_survivals ?? 0),
+    ctRoundsWithMultiKill: Number(api.ct_rounds_with_multi_kill ?? 0),
+    ctEcoKillValue: Number(api.ct_eco_kill_value ?? 0),
+    ctKast: Number(api.ct_kast ?? 0),
+    ctClutchRounds: Number(api.ct_clutch_rounds ?? 0),
+    ctClutchWins: Number(api.ct_clutch_wins ?? 0),
+    ctManAdvantageKills: Number(api.ct_man_advantage_kills ?? 0),
+    ctManAdvantageKillsPct: Number(api.ct_man_advantage_kills_pct ?? 0),
+    ctManDisadvantageDeaths: Number(api.ct_man_disadvantage_deaths ?? 0),
+    ctManDisadvantageDeathsPct: Number(api.ct_man_disadvantage_deaths_pct ?? 0),
+    ctRating: Number(api.ct_rating ?? 0),
+    ctEcoRating: Number(api.ct_eco_rating ?? 0),
+    clutch1v2Attempts: Number(api.clutch_1v2_attempts ?? 0),
+    clutch1v2Wins: Number(api.clutch_1v2_wins ?? 0),
+    clutch1v3Attempts: Number(api.clutch_1v3_attempts ?? 0),
+    clutch1v3Wins: Number(api.clutch_1v3_wins ?? 0),
+    clutch1v4Attempts: Number(api.clutch_1v4_attempts ?? 0),
+    clutch1v4Wins: Number(api.clutch_1v4_wins ?? 0),
+    clutch1v5Attempts: Number(api.clutch_1v5_attempts ?? 0),
+    clutch1v5Wins: Number(api.clutch_1v5_wins ?? 0),
+    smokesThrown: Number(api.smokes_thrown ?? 0),
+    hesThrown: Number(api.hes_thrown ?? 0),
+    molotovsThrown: Number(api.molotovs_thrown ?? 0),
+    totalNadesThrown: Number(api.total_nades_thrown ?? 0),
+    heDamage: Number(api.he_damage ?? 0),
+    fireDamage: Number(api.fire_damage ?? 0),
+    damageTaken: Number(api.damage_taken ?? 0),
+    avgTimeToDeath: Number(api.avg_time_to_death ?? 0),
+    tOpeningKills: Number(api.t_opening_kills ?? 0),
+    tOpeningDeaths: Number(api.t_opening_deaths ?? 0),
+    ctOpeningKills: Number(api.ct_opening_kills ?? 0),
+    ctOpeningDeaths: Number(api.ct_opening_deaths ?? 0),
+    enemiesFlashed: Number(api.enemies_flashed ?? 0),
+    ancientRating: 0,
+    ancientGames: 0,
+    anubisRating: 0,
+    anubisGames: 0,
+    dust2Rating: 0,
+    dust2Games: 0,
+    infernoRating: 0,
+    infernoGames: 0,
+    mirageRating: 0,
+    mirageGames: 0,
+    nukeRating: 0,
+    nukeGames: 0,
+    overpassRating: 0,
+    overpassGames: 0,
   };
 }
 
-export async function fetchPlayerStats(): Promise<GroupedPlayer[]> {
-  // Fetch both stats and CSC player data in parallel
-  const [csvResponse, cscPlayers] = await Promise.all([
-    fetch(SHEET_CSV_URL),
+export async function fetchPlayerStats(season?: number): Promise<GroupedPlayer[]> {
+  const seasonParam = season != null ? `&season=${season}` : '';
+  const [regResponse, combineResponse, cscPlayers] = await Promise.all([
+    fetch(`${API_BASE}/aggregated?type=regulation${seasonParam}`),
+    fetch(`${API_BASE}/aggregated?type=combine${seasonParam}`),
     fetchAllPlayers().catch(() => [] as CscPlayer[]),
   ]);
-  
-  const csvText = await csvResponse.text();
 
-  const parsed = Papa.parse<string[]>(csvText, {
-    header: false,
-    skipEmptyLines: true,
-  });
+  const regData = await regResponse.json();
+  const combineData = await combineResponse.json();
 
-  const rows = parsed.data;
-  if (rows.length < 2) return [];
-
-  // Build maps of CSC player names (lowercase) to their tier and type
   const cscTierMap = new Map<string, string>();
   const cscTypeMap = new Map<string, string>();
   for (const player of cscPlayers) {
@@ -246,43 +227,61 @@ export async function fetchPlayerStats(): Promise<GroupedPlayer[]> {
     }
   }
 
-  const dataRows = rows.slice(1);
-  const allStats = dataRows
-    .map(parseRow)
-    .filter((p): p is PlayerStats => p !== null);
-
   const map = new Map<string, GroupedPlayer>();
 
-  for (const stats of allStats) {
-    let group = map.get(stats.steamId);
+  const regResults: Record<string, unknown>[] = regData.results ?? [];
+  const combineResults: Record<string, unknown>[] = combineData.results ?? [];
+
+  for (const api of regResults) {
+    const steamId = String(api.steam_id ?? '');
+    if (!steamId) continue;
+    let group = map.get(steamId);
     if (!group) {
       group = {
-        steamId: stats.steamId,
-        name: stats.name,
+        steamId,
+        name: String(api.name ?? ''),
         cscTier: null,
         cscPlayerType: null,
-        regulation: [],
-        scrim: [],
+        regulation: null,
+        combine: null,
       };
-      map.set(stats.steamId, group);
+      map.set(steamId, group);
     }
+    group.regulation = mapApiToStats(api);
+    group.name = String(api.name ?? '');
 
-    const entry = { stats, tier: stats.tier };
+    const nameLower = String(api.name ?? '').toLowerCase();
+    if (!group.cscTier) {
+      group.cscTier = cscTierMap.get(nameLower) ?? null;
+    }
+    if (!group.cscPlayerType) {
+      group.cscPlayerType = cscTypeMap.get(nameLower) ?? null;
+    }
+  }
 
-    if (isScrimTier(stats.tier)) {
-      group.scrim.push(entry);
-    } else {
-      // Use the regulation name as the display name
-      group.name = stats.name;
-      group.regulation.push(entry);
-      // Try to match CSC tier and type by player name
-      const nameLower = stats.name.toLowerCase();
-      if (!group.cscTier) {
-        group.cscTier = cscTierMap.get(nameLower) ?? null;
-      }
-      if (!group.cscPlayerType) {
-        group.cscPlayerType = cscTypeMap.get(nameLower) ?? null;
-      }
+  for (const api of combineResults) {
+    const steamId = String(api.steam_id ?? '');
+    if (!steamId) continue;
+    let group = map.get(steamId);
+    if (!group) {
+      group = {
+        steamId,
+        name: String(api.name ?? ''),
+        cscTier: null,
+        cscPlayerType: null,
+        regulation: null,
+        combine: null,
+      };
+      map.set(steamId, group);
+    }
+    group.combine = mapApiToStats(api);
+
+    const nameLower = String(api.name ?? '').toLowerCase();
+    if (!group.cscTier) {
+      group.cscTier = cscTierMap.get(nameLower) ?? null;
+    }
+    if (!group.cscPlayerType) {
+      group.cscPlayerType = cscTypeMap.get(nameLower) ?? null;
     }
   }
 

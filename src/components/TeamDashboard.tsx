@@ -121,9 +121,7 @@ export default function TeamDashboard({ players }: Props) {
       
       let stats: PlayerStats | null = null;
       if (groupedPlayer) {
-        const entries = mode === 'regulation' ? groupedPlayer.regulation : groupedPlayer.scrim;
-        const entry = entries.find((e) => e.tier === selectedTeam.tier.name);
-        stats = entry?.stats ?? (entries.length > 0 ? entries[0].stats : null);
+        stats = groupedPlayer[mode];
       }
 
       return {
@@ -189,9 +187,7 @@ export default function TeamDashboard({ players }: Props) {
         const groupedPlayer = players.find((gp) => gp.steamId === cscPlayer.steam64Id);
         let stats: PlayerStats | null = null;
         if (groupedPlayer) {
-          const entries = mode === 'regulation' ? groupedPlayer.regulation : groupedPlayer.scrim;
-          const entry = entries.find((e) => e.tier === selectedTeam.tier.name);
-          stats = entry?.stats ?? (entries.length > 0 ? entries[0].stats : null);
+          stats = groupedPlayer[mode];
         }
         return { cscPlayer, groupedPlayer, stats };
       })

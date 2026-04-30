@@ -77,7 +77,7 @@ export type PlayerType =
   | 'SIGNED_PROMOTED'
   | 'EXPIRED';
 
-const CSC_GRAPHQL_ENDPOINT = 'https://core.csconfederation.com/graphql';
+const CSC_GRAPHQL_ENDPOINT = 'https://core.playcsc.com/graphql';
 
 function isCacheValid<T>(entry: CacheEntry<T> | null): entry is CacheEntry<T> {
   if (!entry) return false;

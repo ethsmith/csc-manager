@@ -1,4 +1,4 @@
-import { Swords, Gamepad2 } from 'lucide-react';
+import { Swords, FlaskConical } from 'lucide-react';
 import type { StatMode } from '../types';
 
 interface Props {
@@ -21,15 +21,15 @@ export default function ModeToggle({ mode, onChange }: Props) {
         Regulation
       </button>
       <button
-        onClick={() => onChange('scrim')}
+        onClick={() => onChange('combine')}
         className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all cursor-pointer rounded-lg btn-glow ${
-          mode === 'scrim'
+          mode === 'combine'
             ? 'bg-gradient-to-r from-neon-purple/25 to-neon-purple/15 text-neon-purple shadow-lg shadow-neon-purple/20'
             : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
         }`}
       >
-        <Gamepad2 size={16} />
-        Scrims
+        <FlaskConical size={16} />
+        Combine
       </button>
     </div>
   );

@@ -1,23 +1,18 @@
-export type StatMode = 'regulation' | 'scrim';
-
-export interface StatEntry {
-  stats: PlayerStats;
-  tier: string;
-}
+export type StatMode = 'regulation' | 'combine';
 
 export interface GroupedPlayer {
   steamId: string;
   name: string;
   cscTier: string | null;
   cscPlayerType: string | null;
-  regulation: StatEntry[];
-  scrim: StatEntry[];
+  regulation: PlayerStats | null;
+  combine: PlayerStats | null;
 }
 
 export interface PlayerStats {
   steamId: string;
   name: string;
-  tier: string;
+  teamName: string;
   games: number;
   finalRating: number;
   hltvRating: number;

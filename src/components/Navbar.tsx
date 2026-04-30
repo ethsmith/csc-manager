@@ -1,11 +1,18 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Trophy, Users, Building2, Medal } from 'lucide-react';
+import { Trophy, Users, Building2, Medal, Sparkles } from 'lucide-react';
+import SeasonSelector from './SeasonSelector';
 
-export default function Navbar() {
+interface Props {
+  season?: number;
+  onSeasonChange?: (season: number) => void;
+}
+
+export default function Navbar({ season, onSeasonChange }: Props) {
   const location = useLocation();
   const isPlayersActive = location.pathname === '/' || location.pathname.startsWith('/players');
   const isTeamsActive = location.pathname.startsWith('/teams');
   const isLeaderboardActive = location.pathname.startsWith('/leaderboard');
+  const isArchetypesActive = location.pathname.startsWith('/archetypes');
 
   return (
     <nav className="glass border-b border-neon-blue/20 sticky top-0 z-50">
@@ -52,7 +59,21 @@ export default function Navbar() {
               <Medal size={18} />
               Leaderboard
             </NavLink>
+            <NavLink
+              to="/archetypes"
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                isArchetypesActive
+                  ? 'bg-violet-400/15 text-violet-300'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+              }`}
+            >
+              <Sparkles size={18} />
+              Archetypes
+            </NavLink>
           </div>
+          {season != null && onSeasonChange && (
+            <SeasonSelector season={season} onChange={onSeasonChange} />
+          )}
         </div>
       </div>
     </nav>

@@ -64,8 +64,8 @@ export default function Leaderboard({ players }: Props) {
     const result: { name: string; steamId: string; stats: PlayerStats }[] = [];
     players.forEach((p) => {
       if (selectedTier !== 'All' && p.cscTier !== selectedTier) return;
-      if (p.regulation.length > 0) {
-        const stats = p.regulation[0].stats;
+      if (p.regulation) {
+        const stats = p.regulation;
         if (stats.games < minGames) return;
         result.push({
           name: p.name,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, useParams, useNavigate } from 'react-router-dom';
 import type { GroupedPlayer, StatMode } from './types';
 import { fetchPlayerStats } from './fetchData';
@@ -8,6 +8,7 @@ import PlayerDashboard from './components/PlayerDashboard';
 import TeamDashboard from './components/TeamDashboard';
 import DevStatAverages from './components/DevStatAverages';
 import Leaderboard from './components/Leaderboard';
+import Archetypes from './components/Archetypes';
 import { Loader2 } from 'lucide-react';
 
 function PlayersListPage({ players }: { players: GroupedPlayer[] }) {
@@ -88,22 +89,44 @@ function LeaderboardPage({ players }: { players: GroupedPlayer[] }) {
   );
 }
 
+function ArchetypesPage({ players }: { players: GroupedPlayer[] }) {
+  return (
+    <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">
+      <Archetypes players={players} />
+    </div>
+  );
+}
+
 function App() {
   const [players, setPlayers] = useState<GroupedPlayer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [season, setSeason] = useState<number>(() => {
+    const stored = localStorage.getItem('fragg-season');
+    return stored ? Number(stored) : 20;
+  });
+
+  const handleSeasonChange = useCallback((s: number) => {
+    setSeason(s);
+    localStorage.setItem('fragg-season', String(s));
+  }, []);
 
   useEffect(() => {
-    fetchPlayerStats()
+    let cancelled = false;
+    fetchPlayerStats(season)
       .then((data) => {
+        if (cancelled) return;
         setPlayers(data);
         setLoading(false);
+        setError(null);
       })
       .catch((err) => {
+        if (cancelled) return;
         setError(err.message);
         setLoading(false);
       });
-  }, []);
+    return () => { cancelled = true; };
+  }, [season]);
 
   if (loading) {
     return (
@@ -114,7 +137,7 @@ function App() {
             <Loader2 size={56} className="animate-spin text-neon-blue mx-auto relative" />
           </div>
           <p className="text-slate-300 text-lg font-medium gradient-text">Loading player stats...</p>
-          <p className="text-slate-500 text-sm">Fetching data from Google Sheets</p>
+          <p className="text-slate-500 text-sm">Fetching data from FRAGG 3.0 API</p>
         </div>
       </div>
     );
@@ -141,7 +164,7 @@ function App() {
   return (
     <BrowserRouter>
       <div className="min-h-screen flex flex-col">
-        <Navbar />
+        <Navbar season={season} onSeasonChange={handleSeasonChange} />
         <main className="flex-1">
           <Routes>
             <Route path="/" element={<PlayersListPage players={players} />} />
@@ -149,6 +172,7 @@ function App() {
             <Route path="/players/:steamId" element={<PlayerDetailPage players={players} />} />
             <Route path="/teams" element={<TeamsPage players={players} />} />
             <Route path="/leaderboard" element={<LeaderboardPage players={players} />} />
+            <Route path="/archetypes" element={<ArchetypesPage players={players} />} />
             <Route path="/dev" element={<DevPage players={players} />} />
           </Routes>
         </main>

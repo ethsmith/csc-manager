@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   Crosshair,
   Skull,
@@ -16,7 +16,7 @@ import {
   Swords,
   HandHelping,
 } from 'lucide-react';
-import type { PlayerStats, GroupedPlayer, StatMode, StatEntry } from '../types';
+import type { PlayerStats, GroupedPlayer, StatMode } from '../types';
 import StatCard from './StatCard';
 import PerformanceRadar from './RadarChart';
 import KillDistribution from './KillDistribution';
@@ -86,20 +86,21 @@ function pct(val: number): string {
   return `${(val * 100).toFixed(1)}%`;
 }
 
-function getEntries(gp: GroupedPlayer, mode: StatMode): StatEntry[] {
-  return mode === 'regulation' ? gp.regulation : gp.scrim;
+function getEntry(gp: GroupedPlayer, mode: StatMode): PlayerStats | null {
+  return gp[mode];
 }
 
 function getAllStatsForMode(allPlayers: GroupedPlayer[], mode: StatMode): PlayerStats[] {
-  return allPlayers.flatMap((gp) => getEntries(gp, mode).map((e) => e.stats));
+  const result: PlayerStats[] = [];
+  for (const gp of allPlayers) {
+    const stats = gp[mode];
+    if (stats) result.push(stats);
+  }
+  return result;
 }
 
 export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode, onModeChange, onBack }: Props) {
-  const entries = getEntries(groupedPlayer, mode);
-  const [selectedIdx, setSelectedIdx] = useState(0);
-
-  const safeIdx = Math.min(selectedIdx, entries.length - 1);
-  const entry = entries[safeIdx] ?? entries[0];
+  const player = getEntry(groupedPlayer, mode);
 
   const allPlayers = useMemo(
     () => getAllStatsForMode(allGroupedPlayers, mode),
@@ -110,12 +111,17 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
   const tierPlayers = useMemo(() => {
     const playerTier = groupedPlayer.cscTier;
     if (!playerTier) return allPlayers;
-    return allGroupedPlayers
-      .filter((gp) => gp.cscTier === playerTier)
-      .flatMap((gp) => getEntries(gp, mode).map((e) => e.stats));
-  }, [allGroupedPlayers, groupedPlayer.cscTier, mode]);
+    const result: PlayerStats[] = [];
+    for (const gp of allGroupedPlayers) {
+      if (gp.cscTier === playerTier) {
+        const stats = gp[mode];
+        if (stats) result.push(stats);
+      }
+    }
+    return result;
+  }, [allGroupedPlayers, groupedPlayer.cscTier, mode, allPlayers]);
 
-  if (!entry) {
+  if (!player) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4 flex-wrap">
@@ -132,17 +138,15 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
             No {mode} stats available for <span className="text-neon-blue font-semibold">{groupedPlayer.name}</span>
           </p>
           <button
-            onClick={() => onModeChange(mode === 'regulation' ? 'scrim' : 'regulation')}
+            onClick={() => onModeChange(mode === 'regulation' ? 'combine' : 'regulation')}
             className="mt-4 px-6 py-2 rounded-lg bg-neon-blue/20 text-neon-blue border border-neon-blue/30 hover:bg-neon-blue/30 transition-colors cursor-pointer"
           >
-            Switch to {mode === 'regulation' ? 'Scrims' : 'Regulation'}
+            Switch to {mode === 'regulation' ? 'Combine' : 'Regulation'}
           </button>
         </div>
       </div>
     );
   }
-
-  const player = entry.stats;
 
   return (
     <div className="space-y-6 animate-in">
@@ -154,46 +158,26 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
         >
           ← Back
         </button>
-        <ModeToggle mode={mode} onChange={(m) => { onModeChange(m); setSelectedIdx(0); }} />
+        <ModeToggle mode={mode} onChange={onModeChange} />
         <div className="flex-1 min-w-0">
           <h1 className="text-3xl font-bold truncate gradient-text">{groupedPlayer.name}</h1>
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             <span className={`text-sm px-3 py-0.5 rounded-full border ${
-              mode === 'scrim'
+              mode === 'combine'
                 ? 'bg-neon-purple/10 text-neon-purple border-neon-purple/20'
                 : 'bg-neon-blue/10 text-neon-blue border-neon-blue/20'
             }`}>
-              {entry.tier}
+              {mode === 'regulation' ? (groupedPlayer.cscTier ?? player.teamName) : player.teamName}
             </span>
             <span className="text-sm text-slate-400">
               {player.games} game{player.games !== 1 ? 's' : ''} · {player.roundsPlayed} rounds
             </span>
-            {mode === 'scrim' && player.name !== groupedPlayer.name && (
+            {mode === 'combine' && player.name !== groupedPlayer.name && (
               <span className="text-sm text-slate-500 italic">
                 alias: {player.name}
               </span>
             )}
           </div>
-          {/* Entry selector if multiple entries in this mode */}
-          {entries.length > 1 && (
-            <div className="flex gap-2 mt-2 flex-wrap">
-              {entries.map((e, i) => (
-                <button
-                  key={`${e.tier}-${i}`}
-                  onClick={() => setSelectedIdx(i)}
-                  className={`text-xs px-3 py-1 rounded-lg border transition-all cursor-pointer ${
-                    i === safeIdx
-                      ? mode === 'scrim'
-                        ? 'bg-neon-purple/20 text-neon-purple border-neon-purple/30'
-                        : 'bg-neon-blue/20 text-neon-blue border-neon-blue/30'
-                      : 'bg-white/5 text-slate-400 border-white/10 hover:border-white/20'
-                  }`}
-                >
-                  {e.tier} ({e.stats.games}g)
-                </button>
-              ))}
-            </div>
-          )}
         </div>
         <div className="text-right glass rounded-xl px-5 py-3 card-glow">
           <div className="text-xs uppercase tracking-wider text-slate-400 mb-1">Final Rating</div>
