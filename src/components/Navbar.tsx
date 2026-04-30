@@ -15,12 +15,12 @@ export default function Navbar({ season, onSeasonChange }: Props) {
   const isArchetypesActive = location.pathname.startsWith('/archetypes');
 
   return (
-    <nav className="glass border-b border-neon-blue/20 sticky top-0 z-50">
+    <nav className="glass border-b border-white/5 sticky top-0 z-50 backdrop-blur-xl">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <NavLink to="/" className="flex items-center gap-3 group">
-            <div className="p-2 rounded-xl bg-gradient-to-br from-neon-blue/20 to-neon-purple/20 border border-neon-blue/30 group-hover:border-neon-blue/50 transition-colors">
-              <Trophy size={24} className="text-neon-blue" />
+            <div className="p-2 rounded-xl bg-gradient-to-br from-accent/10 to-neon-purple/10 border border-accent/20 group-hover:border-accent/40 transition-colors">
+              <Trophy size={24} className="text-accent" />
             </div>
             <span className="text-xl font-bold gradient-text">FRAGG 3.0</span>
           </NavLink>
@@ -30,7 +30,7 @@ export default function Navbar({ season, onSeasonChange }: Props) {
               to="/players"
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 isPlayersActive
-                  ? 'bg-neon-blue/15 text-neon-blue'
+                  ? 'bg-accent/10 text-accent'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
               }`}
             >
@@ -41,7 +41,7 @@ export default function Navbar({ season, onSeasonChange }: Props) {
               to="/teams"
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 isTeamsActive
-                  ? 'bg-neon-purple/15 text-neon-purple'
+                  ? 'bg-neon-purple/10 text-neon-purple'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
               }`}
             >
@@ -52,7 +52,7 @@ export default function Navbar({ season, onSeasonChange }: Props) {
               to="/leaderboard"
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 isLeaderboardActive
-                  ? 'bg-yellow-400/15 text-yellow-400'
+                  ? 'bg-yellow-400/10 text-yellow-400'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
               }`}
             >
@@ -63,7 +63,7 @@ export default function Navbar({ season, onSeasonChange }: Props) {
               to="/archetypes"
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 isArchetypesActive
-                  ? 'bg-violet-400/15 text-violet-300'
+                  ? 'bg-neon-purple/10 text-neon-purple'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
               }`}
             >

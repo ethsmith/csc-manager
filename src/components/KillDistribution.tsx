@@ -22,18 +22,18 @@ export default function KillDistribution({ player }: Props) {
         label: 'Round Count',
         data: [player.oneK, player.twoK, player.threeK, player.fourK, player.fiveK],
         backgroundColor: [
-          'rgba(0, 212, 255, 0.7)',
-          'rgba(0, 180, 255, 0.7)',
-          'rgba(0, 140, 255, 0.7)',
-          'rgba(168, 85, 247, 0.7)',
-          'rgba(236, 72, 153, 0.7)',
+          'rgba(79, 143, 255, 0.6)',
+          'rgba(99, 155, 255, 0.6)',
+          'rgba(119, 167, 255, 0.6)',
+          'rgba(167, 139, 250, 0.6)',
+          'rgba(244, 114, 182, 0.6)',
         ],
         borderColor: [
-          '#00d4ff',
-          '#00b4ff',
-          '#008cff',
-          '#a855f7',
-          '#ec4899',
+          '#4f8fff',
+          '#639bff',
+          '#77a7ff',
+          '#a78bfa',
+          '#f472b6',
         ],
         borderWidth: 1,
         borderRadius: 6,
@@ -46,21 +46,21 @@ export default function KillDistribution({ player }: Props) {
     maintainAspectRatio: false,
     scales: {
       x: {
-        grid: { color: 'rgba(0, 212, 255, 0.05)' },
+        grid: { color: 'rgba(255, 255, 255, 0.04)' },
         ticks: { color: '#94a3b8', font: { weight: 600 as const } },
       },
       y: {
         beginAtZero: true,
-        grid: { color: 'rgba(0, 212, 255, 0.08)' },
+        grid: { color: 'rgba(255, 255, 255, 0.05)' },
         ticks: { color: '#94a3b8', stepSize: 1 },
       },
     },
     plugins: {
       tooltip: {
-        backgroundColor: 'rgba(10, 14, 26, 0.9)',
-        borderColor: 'rgba(0, 212, 255, 0.3)',
+        backgroundColor: 'rgba(12, 12, 24, 0.95)',
+        borderColor: 'rgba(79, 143, 255, 0.2)',
         borderWidth: 1,
-        titleColor: '#00d4ff',
+        titleColor: '#4f8fff',
         bodyColor: '#e2e8f0',
       },
     },
@@ -69,7 +69,7 @@ export default function KillDistribution({ player }: Props) {
   return (
     <div className="glass rounded-xl p-6 card-glow group">
       <h3 className="text-lg font-semibold text-neon-blue mb-4 flex items-center gap-2">
-        <span className="w-1.5 h-5 bg-gradient-to-b from-neon-cyan to-neon-blue rounded-full"></span>
+        <span className="w-1.5 h-5 bg-gradient-to-b from-neon-cyan to-accent rounded-full"></span>
         Kill Rounds Distribution
       </h3>
       <div className="h-64">

@@ -35,8 +35,8 @@ export default function SideComparison({ player }: Props) {
       {
         label: 'CT Side',
         data: [player.ctRating, ctAdr, ctKpr, player.ctKast],
-        backgroundColor: 'rgba(0, 212, 255, 0.6)',
-        borderColor: '#00d4ff',
+        backgroundColor: 'rgba(79, 143, 255, 0.6)',
+        borderColor: '#4f8fff',
         borderWidth: 1,
         borderRadius: 6,
       },
@@ -48,12 +48,12 @@ export default function SideComparison({ player }: Props) {
     maintainAspectRatio: false,
     scales: {
       x: {
-        grid: { color: 'rgba(0, 212, 255, 0.05)' },
+        grid: { color: 'rgba(255, 255, 255, 0.04)' },
         ticks: { color: '#94a3b8', font: { weight: 600 as const } },
       },
       y: {
         beginAtZero: true,
-        grid: { color: 'rgba(0, 212, 255, 0.08)' },
+        grid: { color: 'rgba(255, 255, 255, 0.05)' },
         ticks: { color: '#94a3b8' },
       },
     },
@@ -62,10 +62,10 @@ export default function SideComparison({ player }: Props) {
         labels: { color: '#94a3b8', usePointStyle: true, pointStyle: 'circle' as const },
       },
       tooltip: {
-        backgroundColor: 'rgba(10, 14, 26, 0.9)',
-        borderColor: 'rgba(0, 212, 255, 0.3)',
+        backgroundColor: 'rgba(12, 12, 24, 0.95)',
+        borderColor: 'rgba(79, 143, 255, 0.2)',
         borderWidth: 1,
-        titleColor: '#00d4ff',
+        titleColor: '#4f8fff',
         bodyColor: '#e2e8f0',
       },
     },

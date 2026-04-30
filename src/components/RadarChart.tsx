@@ -45,13 +45,13 @@ export default function PerformanceRadar({ player, allPlayers }: Props) {
             allPlayers.map((p) => p[m.key])
           )
         ),
-        backgroundColor: 'rgba(0, 212, 255, 0.15)',
-        borderColor: '#00d4ff',
+        backgroundColor: 'rgba(79, 143, 255, 0.1)',
+        borderColor: '#4f8fff',
         borderWidth: 2,
-        pointBackgroundColor: '#00d4ff',
-        pointBorderColor: '#00d4ff',
-        pointHoverBackgroundColor: '#00fff2',
-        pointHoverBorderColor: '#00fff2',
+        pointBackgroundColor: '#4f8fff',
+        pointBorderColor: '#4f8fff',
+        pointHoverBackgroundColor: '#7bb5e8',
+        pointHoverBorderColor: '#7bb5e8',
         pointRadius: 4,
       },
     ],
@@ -71,10 +71,10 @@ export default function PerformanceRadar({ player, allPlayers }: Props) {
           font: { size: 10 },
         },
         grid: {
-          color: 'rgba(0, 212, 255, 0.1)',
+          color: 'rgba(255, 255, 255, 0.05)',
         },
         angleLines: {
-          color: 'rgba(0, 212, 255, 0.1)',
+          color: 'rgba(255, 255, 255, 0.05)',
         },
         pointLabels: {
           color: '#94a3b8',
@@ -84,10 +84,10 @@ export default function PerformanceRadar({ player, allPlayers }: Props) {
     },
     plugins: {
       tooltip: {
-        backgroundColor: 'rgba(10, 14, 26, 0.9)',
-        borderColor: 'rgba(0, 212, 255, 0.3)',
+        backgroundColor: 'rgba(12, 12, 24, 0.95)',
+        borderColor: 'rgba(79, 143, 255, 0.2)',
         borderWidth: 1,
-        titleColor: '#00d4ff',
+        titleColor: '#4f8fff',
         bodyColor: '#e2e8f0',
         callbacks: {
           label: (ctx: { raw: unknown; label: string }) => `${ctx.label}: ${ctx.raw}th percentile`,

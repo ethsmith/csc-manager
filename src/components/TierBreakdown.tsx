@@ -3,16 +3,16 @@ import { Layers, ChevronDown, ChevronUp } from 'lucide-react';
 import { useState } from 'react';
 
 const TIER_HEX: string[] = [
-  '#00d4ff',
-  '#a855f7',
-  '#34d399',
-  '#facc15',
-  '#00fff2',
+  '#4f8fff',
+  '#a78bfa',
+  '#5eead4',
+  '#f59e0b',
+  '#f472b6',
   '#f87171',
   '#fb923c',
-  '#f472b6',
-  '#ec4899',
   '#94a3b8',
+  '#34d399',
+  '#64748b',
 ];
 
 interface Props {
