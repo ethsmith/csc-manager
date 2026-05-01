@@ -348,12 +348,13 @@ export async function fetchPlayerMatches(
 
   await Promise.all(
     matchIds.map(async (matchId) => {
+      const cacheKey = `${matchId}:${type}`;
       let players: MatchPlayer[];
-      const matchCached = matchCache.get(matchId);
+      const matchCached = matchCache.get(cacheKey);
       if (isCacheValid(matchCached)) {
         players = matchCached.data;
       } else {
-        const matchRes = await fetch(`${API_BASE}/match/${matchId}`);
+        const matchRes = await fetch(`${API_BASE}/match/${matchId}?type=${type}`);
         const matchData = await matchRes.json();
         const results: Record<string, unknown>[] = matchData.results ?? [];
         players = results.map((r) => ({
@@ -361,7 +362,7 @@ export async function fetchPlayerMatches(
           name: String(r.name ?? ''),
           teamName: String(r.team_name ?? ''),
         }));
-        matchCache.set(matchId, { data: players, timestamp: Date.now() });
+        matchCache.set(cacheKey, { data: players, timestamp: Date.now() });
       }
 
       const teams = new Set(players.map((p) => p.teamName));

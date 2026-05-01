@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { BrowserRouter, Routes, Route, useParams, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import type { GroupedPlayer, StatMode, PlayerTierBreakdown } from './types';
 import { fetchPlayerStats, fetchPlayerMatches } from './fetchData';
 import Navbar from './components/Navbar';
@@ -9,6 +9,7 @@ import TeamDashboard from './components/TeamDashboard';
 import DevStatAverages from './components/DevStatAverages';
 import Leaderboard from './components/Leaderboard';
 import Archetypes from './components/Archetypes';
+import Drafting from './components/Drafting';
 import { Loader2 } from 'lucide-react';
 
 function PlayersListPage({ players }: { players: GroupedPlayer[] }) {
@@ -21,7 +22,7 @@ function PlayersListPage({ players }: { players: GroupedPlayer[] }) {
         players={players}
         mode={mode}
         onModeChange={setMode}
-        onSelect={(player) => navigate(`/players/${player.steamId}`)}
+        onSelect={(player) => navigate(`/players/${player.steamId}?mode=${mode}`)}
       />
     </div>
   );
@@ -30,7 +31,9 @@ function PlayersListPage({ players }: { players: GroupedPlayer[] }) {
 function PlayerDetailPage({ players, season }: { players: GroupedPlayer[]; season: number }) {
   const { steamId } = useParams<{ steamId: string }>();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<StatMode>('regulation');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const mode: StatMode = (searchParams.get('mode') as StatMode) === 'combine' ? 'combine' : 'regulation';
+  const setMode = (m: StatMode) => setSearchParams({ mode: m });
   const [tierBreakdown, setTierBreakdown] = useState<PlayerTierBreakdown | null>(null);
 
   const player = players.find((p) => p.steamId === steamId);
@@ -114,6 +117,10 @@ function ArchetypesPage({ players }: { players: GroupedPlayer[] }) {
   );
 }
 
+function DraftingPage({ players }: { players: GroupedPlayer[] }) {
+  return <Drafting players={players} />;
+}
+
 function App() {
   const [players, setPlayers] = useState<GroupedPlayer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -190,6 +197,7 @@ function App() {
             <Route path="/teams" element={<TeamsPage players={players} />} />
             <Route path="/leaderboard" element={<LeaderboardPage players={players} />} />
             <Route path="/archetypes" element={<ArchetypesPage players={players} />} />
+            <Route path="/drafting" element={<DraftingPage players={players} />} />
             <Route path="/dev" element={<DevPage players={players} />} />
           </Routes>
         </main>
