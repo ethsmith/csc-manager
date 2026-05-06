@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Trophy, ChevronDown, Medal } from 'lucide-react';
-import type { GroupedPlayer, PlayerStats } from '../types';
+import type { GroupedPlayer, PlayerStats, StatMode } from '../types';
+import ModeToggle from './ModeToggle';
 
 interface Props {
   players: GroupedPlayer[];
@@ -51,6 +52,7 @@ export default function Leaderboard({ players }: Props) {
   const [selectedTier, setSelectedTier] = useState<string>('All');
   const [topCount, setTopCount] = useState<number>(5);
   const [minGames, setMinGames] = useState<number>(1);
+  const [mode, setMode] = useState<StatMode>('regulation');
 
   const tiers = useMemo(() => {
     const tierSet = new Set<string>();
@@ -64,8 +66,8 @@ export default function Leaderboard({ players }: Props) {
     const result: { name: string; steamId: string; stats: PlayerStats }[] = [];
     players.forEach((p) => {
       if (selectedTier !== 'All' && p.cscTier !== selectedTier) return;
-      if (p.regulation) {
-        const stats = p.regulation;
+      if (p[mode]) {
+        const stats = p[mode]!;
         if (stats.games < minGames) return;
         result.push({
           name: p.name,
@@ -75,7 +77,7 @@ export default function Leaderboard({ players }: Props) {
       }
     });
     return result;
-  }, [players, selectedTier, minGames]);
+  }, [players, selectedTier, minGames, mode]);
 
   const getLeaderboard = (stat: StatDef) => {
     const sorted = [...filteredPlayers].sort((a, b) => {
@@ -114,8 +116,10 @@ export default function Leaderboard({ players }: Props) {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-3">
+        {/* Mode + Filters */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <ModeToggle mode={mode} onChange={setMode} />
+
           {/* Tier Dropdown */}
           <div className="relative">
             <select
