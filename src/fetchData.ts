@@ -1,7 +1,7 @@
 import type { PlayerStats, GroupedPlayer, MatchPlayer, PlayerTierBreakdown, TierBreakdown, MatchWithTiers } from './types';
 import { fetchAllPlayers, type CscPlayer } from './fetchFranchises';
 
-const API_BASE = 'https://fragg-3-0-api.vercel.app/player-stats';
+const API_BASE = 'https://api.scoutcsc.gg/player-stats';
 const CACHE_DURATION_MS = 10 * 60 * 1000;
 
 interface CacheEntry<T> {
