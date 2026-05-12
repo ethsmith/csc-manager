@@ -1031,7 +1031,7 @@ export default function Drafting({ players, mode }: Props) {
                           <td className="px-2 py-2.5 text-right text-slate-400">{s.games}</td>
                           <td className="px-2 py-2.5">
                             {archDef ? (
-                              <span className={`text-xs px-2 py-0.5 rounded-full border ${archDef.textClass} ${archDef.bgClass} ${archDef.borderClass}`}>
+                              <span className={`text-xs px-2 py-0.5 rounded-full border whitespace-nowrap ${archDef.textClass} ${archDef.bgClass} ${archDef.borderClass}`}>
                                 {archDef.name}
                               </span>
                             ) : (
@@ -1342,7 +1342,7 @@ export default function Drafting({ players, mode }: Props) {
                       </div>
 
                       <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                        <table className="w-full min-w-max text-sm">
                           <thead>
                             <tr className="border-b border-white/5 text-xs text-slate-400">
                               <th className="text-left px-3 py-2 font-medium uppercase tracking-wider">Player</th>
@@ -1353,7 +1353,7 @@ export default function Drafting({ players, mode }: Props) {
                               <th className="text-right px-3 py-2 font-medium uppercase tracking-wider">Skill</th>
                               <th className="text-right px-3 py-2 font-medium uppercase tracking-wider">Gap Score</th>
                               <th className="text-left px-3 py-2 font-medium uppercase tracking-wider">Fills Gaps In</th>
-                              <th className="text-center px-3 py-2 font-medium uppercase tracking-wider">Draft</th>
+                              <th className="text-center px-3 py-2 font-medium uppercase tracking-wider min-w-[86px] whitespace-nowrap">Draft</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1390,7 +1390,7 @@ export default function Drafting({ players, mode }: Props) {
                                   </td>
                                   <td className="px-3 py-2">
                                     {archDef ? (
-                                      <span className={`text-xs px-1.5 py-0.5 rounded-full border ${archDef.textClass} ${archDef.bgClass} ${archDef.borderClass}`}>
+                                      <span className={`text-xs px-1.5 py-0.5 rounded-full border whitespace-nowrap ${archDef.textClass} ${archDef.bgClass} ${archDef.borderClass}`}>
                                         {archDef.name}
                                       </span>
                                     ) : (
@@ -1435,11 +1435,11 @@ export default function Drafting({ players, mode }: Props) {
                                       ))}
                                     </div>
                                   </td>
-                                  <td className="px-3 py-2 text-center">
+                                  <td className="px-3 py-2 text-center min-w-[86px] whitespace-nowrap">
                                     {draftList.includes(gp.steamId) ? (
                                       <button
                                         onClick={() => removeFromDraft(gp.steamId)}
-                                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-accent/20 text-accent border border-accent/30 hover:bg-red-400/10 hover:text-red-400 transition-colors cursor-pointer"
+                                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-accent/20 text-accent border border-accent/30 hover:bg-red-400/10 hover:text-red-400 transition-colors cursor-pointer whitespace-nowrap"
                                       >
                                         <X size={11} />
                                         Remove
@@ -1447,7 +1447,7 @@ export default function Drafting({ players, mode }: Props) {
                                     ) : (
                                       <button
                                         onClick={() => addToDraft(gp.steamId)}
-                                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20 transition-colors cursor-pointer"
+                                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20 transition-colors cursor-pointer whitespace-nowrap"
                                       >
                                         <Plus size={11} />
                                         Add
@@ -1468,9 +1468,9 @@ export default function Drafting({ players, mode }: Props) {
           )}
 
           {/* ── Available Players + Draft List ─────── */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
             {/* ── Available Players ───────────────── */}
-            <div className="lg:col-span-2 space-y-4">
+            <div className="xl:col-span-3 space-y-4">
               <div className="glass rounded-xl overflow-hidden">
                 <div className="px-5 py-3 border-b border-white/5 flex flex-wrap items-center gap-3">
                   <div className="relative flex-1 min-w-[200px]">
@@ -1511,7 +1511,7 @@ export default function Drafting({ players, mode }: Props) {
                 )}
 
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full min-w-max text-sm">
                     <thead>
                       <tr className="border-b border-white/5 text-xs text-slate-400">
                         <th className="text-left px-3 py-2.5 font-medium uppercase tracking-wider">Player</th>
@@ -1530,7 +1530,7 @@ export default function Drafting({ players, mode }: Props) {
                         <th className="text-right px-2 py-2.5 font-medium uppercase tracking-wider">Trade</th>
                         <th className="text-right px-2 py-2.5 font-medium uppercase tracking-wider">T Rat</th>
                         <th className="text-right px-2 py-2.5 font-medium uppercase tracking-wider">CT Rat</th>
-                        <th className="text-center px-2 py-2.5 font-medium uppercase tracking-wider">Draft</th>
+                        <th className="text-center px-2 py-2.5 font-medium uppercase tracking-wider min-w-[86px] whitespace-nowrap">Draft</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1574,7 +1574,7 @@ export default function Drafting({ players, mode }: Props) {
                             </td>
                             <td className="px-2 py-2">
                               {archDef ? (
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${archDef.textClass} ${archDef.bgClass} ${archDef.borderClass}`}>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full border whitespace-nowrap ${archDef.textClass} ${archDef.bgClass} ${archDef.borderClass}`}>
                                   {archDef.name}
                                 </span>
                               ) : (
@@ -1627,13 +1627,13 @@ export default function Drafting({ players, mode }: Props) {
                             <td className={`px-2 py-2 text-right text-xs ${getStatColor(s.ctRating, statRanges.ctRating)}`}>
                               {s.ctRating.toFixed(2)}
                             </td>
-                            <td className="px-2 py-2 text-center">
+                            <td className="px-2 py-2 text-center min-w-[86px] whitespace-nowrap">
                               {isRostered ? (
-                                <span className="text-[10px] text-slate-500 italic">on roster</span>
+                                <span className="text-[10px] text-slate-500 italic whitespace-nowrap">on roster</span>
                               ) : draftList.includes(gp.steamId) ? (
                                 <button
                                   onClick={() => removeFromDraft(gp.steamId)}
-                                  className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-accent/20 text-accent border border-accent/30 hover:bg-red-400/10 hover:text-red-400 transition-colors cursor-pointer"
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-accent/20 text-accent border border-accent/30 hover:bg-red-400/10 hover:text-red-400 transition-colors cursor-pointer whitespace-nowrap"
                                 >
                                   <X size={11} />
                                   Remove
@@ -1641,7 +1641,7 @@ export default function Drafting({ players, mode }: Props) {
                               ) : (
                                 <button
                                   onClick={() => addToDraft(gp.steamId)}
-                                  className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20 transition-colors cursor-pointer"
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-accent/10 text-accent border border-accent/20 hover:bg-accent/20 transition-colors cursor-pointer whitespace-nowrap"
                                 >
                                   <Plus size={11} />
                                   Add
@@ -1667,7 +1667,7 @@ export default function Drafting({ players, mode }: Props) {
             </div>
 
             {/* ── Draft List ─────────────────────── */}
-            <div className="lg:col-span-1">
+            <div className="xl:col-span-1">
               <div className="glass rounded-xl overflow-hidden sticky top-20">
                 <div className="px-5 py-3 border-b border-white/5 flex items-center gap-2">
                   <Trophy size={16} className="text-yellow-400" />
@@ -1719,7 +1719,7 @@ export default function Drafting({ players, mode }: Props) {
 
                             <div className="flex flex-wrap items-center gap-1.5 mb-2">
                               {archDef && (
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${archDef.textClass} ${archDef.bgClass} ${archDef.borderClass}`}>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full border whitespace-nowrap ${archDef.textClass} ${archDef.bgClass} ${archDef.borderClass}`}>
                                   {archDef.name}
                                 </span>
                               )}
@@ -1832,7 +1832,7 @@ export default function Drafting({ players, mode }: Props) {
                             return (
                               <span
                                 key={name}
-                                className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                                className={`text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap ${
                                   def ? `${def.textClass} ${def.bgClass} ${def.borderClass}` : 'text-slate-400 bg-slate-400/10 border-slate-400/20'
                                 }`}
                               >
