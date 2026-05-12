@@ -23,10 +23,10 @@ import type { GroupedPlayer, PlayerStats, StatMode } from '../types';
 import { fetchFranchises, fetchAllPlayers, type Franchise, type FranchisePlayer, type CscPlayer, getPlayerTypeLabel, getPlayerTypeColor, type PlayerType } from '../fetchFranchises';
 import { assignArchetypes, computeSkillRatings, ARCHETYPE_BY_ID, type ArchetypeAssignment, type SkillRating } from '../archetypes';
 import { statRanges, getStatColor } from '../statRanges';
-import ModeToggle from './ModeToggle';
 
 interface Props {
   players: GroupedPlayer[];
+  mode: StatMode;
 }
 
 /* ── Stat config for gap analysis ─────────────────────────────── */
@@ -348,7 +348,7 @@ function GapBar({
 
 /* ── Main Component ─────────────────────────────────────────────── */
 
-export default function Drafting({ players }: Props) {
+export default function Drafting({ players, mode }: Props) {
   const [franchises, setFranchises] = useState<Franchise[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -357,7 +357,6 @@ export default function Drafting({ players }: Props) {
   const [search, setSearch] = useState('');
   const [draftList, setDraftList] = useState<string[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<Set<PlayerType>>(new Set());
-  const [mode, setMode] = useState<StatMode>('regulation');
   const [deOnly, setDeOnly] = useState(false);
   const [cscPlayers, setCscPlayers] = useState<CscPlayer[]>([]);
   const [removedRosterIds, setRemovedRosterIds] = useState<Set<string>>(new Set());
@@ -840,7 +839,6 @@ export default function Drafting({ players }: Props) {
           <p className="text-sm text-slate-400 mt-1">Select your franchise and tier to build a draft list</p>
         </div>
         <div className="flex-1" />
-        <ModeToggle mode={mode} onChange={setMode} />
         {draftList.length > 0 && (
           <button
             onClick={clearDraft}

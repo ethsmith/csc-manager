@@ -1,14 +1,12 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Search, ChevronDown, ChevronUp, Users, Trophy, Filter, Plus, X, SlidersHorizontal } from 'lucide-react';
 import type { GroupedPlayer, StatMode, PlayerStats } from '../types';
 import { getPlayerTypeLabel, getPlayerTypeColor, type PlayerType } from '../fetchFranchises';
-import ModeToggle from './ModeToggle';
 import { statRanges, getStatColor } from '../statRanges';
 
 interface Props {
   players: GroupedPlayer[];
   mode: StatMode;
-  onModeChange: (mode: StatMode) => void;
   onSelect: (player: GroupedPlayer) => void;
 }
 
@@ -306,7 +304,7 @@ function applyFilter(stats: PlayerStats, filter: StatFilter): boolean {
 
 let nextFilterId = 1;
 
-export default function PlayerList({ players, mode, onModeChange, onSelect }: Props) {
+export default function PlayerList({ players, mode, onSelect }: Props) {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('finalRating');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
@@ -315,6 +313,12 @@ export default function PlayerList({ players, mode, onModeChange, onSelect }: Pr
   const [playerTypeFilter, setPlayerTypeFilter] = useState<string>('all');
   const [filters, setFilters] = useState<StatFilter[]>([]);
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  useEffect(() => {
+    setTierFilter('all');
+    setCscTierFilter('all');
+    setPlayerTypeFilter('all');
+  }, [mode]);
 
   const addFilter = useCallback(() => {
     setFilters((prev) => [
@@ -478,7 +482,6 @@ export default function PlayerList({ players, mode, onModeChange, onSelect }: Pr
           <span className="gradient-text">FRAGG 3.0 Stats</span>
         </h1>
         <div className="flex items-center gap-3 ml-auto">
-          <ModeToggle mode={mode} onChange={(m) => { setTierFilter('all'); setCscTierFilter('all'); setPlayerTypeFilter('all'); onModeChange(m); }} />
           <div className="flex items-center gap-2 text-sm text-slate-400">
             <Users size={16} />
             {filtered.length} player{filtered.length !== 1 ? 's' : ''}

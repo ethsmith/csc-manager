@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Building2, Users, Trophy, ChevronDown, Star, TrendingUp, Target, Shield, Loader2, Crown, X, UserPlus, ArrowRightLeft, Crosshair, Zap, Eye, Award, Flame, ExternalLink } from 'lucide-react';
 import type { GroupedPlayer, StatMode, PlayerStats } from '../types';
 import { fetchFranchises, fetchAllPlayers, getPlayerTypeLabel, getPlayerTypeColor, type Franchise, type CscPlayer, type FranchiseTeam, type FranchisePlayer } from '../fetchFranchises';
-import ModeToggle from './ModeToggle';
 import { statRanges, getStatColor, getRatingLabel } from '../statRanges';
 
 interface Props {
   players: GroupedPlayer[];
+  mode: StatMode;
 }
 
 interface RosterPlayer {
@@ -34,9 +34,8 @@ function pct(val: number): string {
 const STORAGE_KEY_FRANCHISE = 'fragg_selected_franchise';
 const STORAGE_KEY_TEAM = 'fragg_selected_team';
 
-export default function TeamDashboard({ players }: Props) {
+export default function TeamDashboard({ players, mode }: Props) {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<StatMode>('regulation');
   const [selectedFranchise, setSelectedFranchise] = useState<Franchise | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<FranchiseTeam | null>(null);
   const [franchiseDropdownOpen, setFranchiseDropdownOpen] = useState(false);
@@ -238,9 +237,6 @@ export default function TeamDashboard({ players }: Props) {
           </div>
           <span className="gradient-text">Team Dashboard</span>
         </h1>
-        <div className="ml-auto">
-          <ModeToggle mode={mode} onChange={setMode} />
-        </div>
       </div>
 
       {/* Franchise Selector */}

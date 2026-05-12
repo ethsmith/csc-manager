@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import { Trophy, ChevronDown, Medal } from 'lucide-react';
 import type { GroupedPlayer, PlayerStats, StatMode } from '../types';
-import ModeToggle from './ModeToggle';
 
 interface Props {
   players: GroupedPlayer[];
+  mode: StatMode;
 }
 
 interface StatDef {
@@ -48,11 +48,10 @@ const LEADERBOARD_STATS: StatDef[] = [
 const TOP_OPTIONS = [3, 5, 10, 15, 20, 25];
 const MIN_GAMES_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-export default function Leaderboard({ players }: Props) {
+export default function Leaderboard({ players, mode }: Props) {
   const [selectedTier, setSelectedTier] = useState<string>('All');
   const [topCount, setTopCount] = useState<number>(5);
   const [minGames, setMinGames] = useState<number>(1);
-  const [mode, setMode] = useState<StatMode>('regulation');
 
   const tiers = useMemo(() => {
     const tierSet = new Set<string>();
@@ -118,8 +117,6 @@ export default function Leaderboard({ players }: Props) {
 
         {/* Mode + Filters */}
         <div className="flex items-center gap-3 flex-wrap">
-          <ModeToggle mode={mode} onChange={setMode} />
-
           {/* Tier Dropdown */}
           <div className="relative">
             <select

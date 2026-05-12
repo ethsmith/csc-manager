@@ -26,7 +26,6 @@ import PerformanceRadar from './RadarChart';
 import KillDistribution from './KillDistribution';
 import SideComparison from './SideComparison';
 import MapRatings from './MapRatings';
-import ModeToggle from './ModeToggle';
 import HLTVRatingCards from './HLTVRatingCards';
 import TierBreakdown from './TierBreakdown';
 import { statRanges, getStatColor } from '../statRanges';
@@ -179,7 +178,6 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
           >
             ← Back
           </button>
-          <ModeToggle mode={mode} onChange={onModeChange} />
         </div>
         <div className="glass rounded-xl p-12 card-glow text-center">
           <p className="text-slate-400 text-lg">
@@ -209,7 +207,6 @@ export default function PlayerDashboard({ groupedPlayer, allGroupedPlayers, mode
           >
             ← Back
           </button>
-          <ModeToggle mode={mode} onChange={onModeChange} />
         </div>
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div className="min-w-0">

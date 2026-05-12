@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { BrowserRouter, Routes, Route, useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useParams, useNavigate } from 'react-router-dom';
 import type { GroupedPlayer, StatMode, PlayerTierBreakdown } from './types';
 import { fetchPlayerStats, fetchPlayerMatches } from './fetchData';
 import Navbar from './components/Navbar';
@@ -12,28 +12,33 @@ import Archetypes from './components/Archetypes';
 import Drafting from './components/Drafting';
 import { Loader2 } from 'lucide-react';
 
-function PlayersListPage({ players }: { players: GroupedPlayer[] }) {
+function PlayersListPage({ players, mode }: { players: GroupedPlayer[]; mode: StatMode }) {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<StatMode>('regulation');
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">
       <PlayerList
         players={players}
         mode={mode}
-        onModeChange={setMode}
-        onSelect={(player) => navigate(`/players/${player.steamId}?mode=${mode}`)}
+        onSelect={(player) => navigate(`/players/${player.steamId}`)}
       />
     </div>
   );
 }
 
-function PlayerDetailPage({ players, season }: { players: GroupedPlayer[]; season: number }) {
+function PlayerDetailPage({
+  players,
+  season,
+  mode,
+  onModeChange,
+}: {
+  players: GroupedPlayer[];
+  season: number;
+  mode: StatMode;
+  onModeChange: (mode: StatMode) => void;
+}) {
   const { steamId } = useParams<{ steamId: string }>();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const mode: StatMode = (searchParams.get('mode') as StatMode) === 'combine' ? 'combine' : 'regulation';
-  const setMode = (m: StatMode) => setSearchParams({ mode: m });
   const [tierBreakdown, setTierBreakdown] = useState<PlayerTierBreakdown | null>(null);
 
   const player = players.find((p) => p.steamId === steamId);
@@ -77,7 +82,7 @@ function PlayerDetailPage({ players, season }: { players: GroupedPlayer[]; seaso
         groupedPlayer={player}
         allGroupedPlayers={players}
         mode={mode}
-        onModeChange={setMode}
+        onModeChange={onModeChange}
         onBack={() => navigate('/players')}
         tierBreakdown={tierBreakdown}
       />
@@ -85,10 +90,10 @@ function PlayerDetailPage({ players, season }: { players: GroupedPlayer[]; seaso
   );
 }
 
-function TeamsPage({ players }: { players: GroupedPlayer[] }) {
+function TeamsPage({ players, mode }: { players: GroupedPlayer[]; mode: StatMode }) {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">
-      <TeamDashboard players={players} />
+      <TeamDashboard players={players} mode={mode} />
     </div>
   );
 }
@@ -101,24 +106,24 @@ function DevPage({ players }: { players: GroupedPlayer[] }) {
   );
 }
 
-function LeaderboardPage({ players }: { players: GroupedPlayer[] }) {
+function LeaderboardPage({ players, mode }: { players: GroupedPlayer[]; mode: StatMode }) {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">
-      <Leaderboard players={players} />
+      <Leaderboard players={players} mode={mode} />
     </div>
   );
 }
 
-function ArchetypesPage({ players }: { players: GroupedPlayer[] }) {
+function ArchetypesPage({ players, mode }: { players: GroupedPlayer[]; mode: StatMode }) {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">
-      <Archetypes players={players} />
+      <Archetypes players={players} mode={mode} />
     </div>
   );
 }
 
-function DraftingPage({ players }: { players: GroupedPlayer[] }) {
-  return <Drafting players={players} />;
+function DraftingPage({ players, mode }: { players: GroupedPlayer[]; mode: StatMode }) {
+  return <Drafting players={players} mode={mode} />;
 }
 
 function App() {
@@ -129,10 +134,19 @@ function App() {
     const stored = localStorage.getItem('fragg-season');
     return stored ? Number(stored) : 20;
   });
+  const [mode, setMode] = useState<StatMode>(() => {
+    const stored = localStorage.getItem('fragg-stat-mode');
+    return stored === 'combine' ? 'combine' : 'regulation';
+  });
 
   const handleSeasonChange = useCallback((s: number) => {
     setSeason(s);
     localStorage.setItem('fragg-season', String(s));
+  }, []);
+
+  const handleModeChange = useCallback((m: StatMode) => {
+    setMode(m);
+    localStorage.setItem('fragg-stat-mode', m);
   }, []);
 
   useEffect(() => {
@@ -188,16 +202,16 @@ function App() {
   return (
     <BrowserRouter>
       <div className="min-h-screen flex flex-col">
-        <Navbar season={season} onSeasonChange={handleSeasonChange} />
+        <Navbar season={season} onSeasonChange={handleSeasonChange} mode={mode} onModeChange={handleModeChange} />
         <main className="flex-1">
           <Routes>
-            <Route path="/" element={<PlayersListPage players={players} />} />
-            <Route path="/players" element={<PlayersListPage players={players} />} />
-            <Route path="/players/:steamId" element={<PlayerDetailPage players={players} season={season} />} />
-            <Route path="/teams" element={<TeamsPage players={players} />} />
-            <Route path="/leaderboard" element={<LeaderboardPage players={players} />} />
-            <Route path="/archetypes" element={<ArchetypesPage players={players} />} />
-            <Route path="/drafting" element={<DraftingPage players={players} />} />
+            <Route path="/" element={<PlayersListPage players={players} mode={mode} />} />
+            <Route path="/players" element={<PlayersListPage players={players} mode={mode} />} />
+            <Route path="/players/:steamId" element={<PlayerDetailPage players={players} season={season} mode={mode} onModeChange={handleModeChange} />} />
+            <Route path="/teams" element={<TeamsPage players={players} mode={mode} />} />
+            <Route path="/leaderboard" element={<LeaderboardPage players={players} mode={mode} />} />
+            <Route path="/archetypes" element={<ArchetypesPage players={players} mode={mode} />} />
+            <Route path="/drafting" element={<DraftingPage players={players} mode={mode} />} />
             <Route path="/dev" element={<DevPage players={players} />} />
           </Routes>
         </main>

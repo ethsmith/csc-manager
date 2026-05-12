@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   ChevronRight,
   Users,
@@ -13,12 +13,12 @@ import {
   computeSkillRatings,
   type Archetype,
 } from '../archetypes';
-import ModeToggle from './ModeToggle';
 import PlayerArchetypeModal from './PlayerArchetypeModal';
 import { statRanges, getStatColor } from '../statRanges';
 
 interface Props {
   players: GroupedPlayer[];
+  mode: StatMode;
 }
 
 interface PlayerInGroup {
@@ -284,12 +284,15 @@ function ArchetypeSection({
 // Page
 // -----------------------------------------------------------------------------
 
-export default function Archetypes({ players }: Props) {
-  const [mode, setMode] = useState<StatMode>('regulation');
+export default function Archetypes({ players, mode }: Props) {
   const [tier, setTier] = useState<string>('All');
   const [minGames, setMinGames] = useState<number>(3);
   const [sort, setSort] = useState<'skill' | 'name'>('skill');
   const [selected, setSelected] = useState<{ entry: PlayerInGroup; arch: Archetype } | null>(null);
+
+  useEffect(() => {
+    setTier('All');
+  }, [mode]);
 
   // Build {gp, stats} pool that respects mode + filters.
   const pool = useMemo(() => {
@@ -378,8 +381,6 @@ export default function Archetypes({ players }: Props) {
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3">
-          <ModeToggle mode={mode} onChange={(m) => { setTier('All'); setMode(m); }} />
-
           <div className="flex items-center gap-2">
             <Filter size={14} className="text-slate-500" />
             <select

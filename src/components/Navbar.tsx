@@ -1,19 +1,30 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { Trophy, Users, Building2, Medal, Sparkles, ClipboardList } from 'lucide-react';
+import type { StatMode } from '../types';
 import SeasonSelector from './SeasonSelector';
+import ModeToggle from './ModeToggle';
 
 interface Props {
   season?: number;
   onSeasonChange?: (season: number) => void;
+  mode?: StatMode;
+  onModeChange?: (mode: StatMode) => void;
 }
 
-export default function Navbar({ season, onSeasonChange }: Props) {
+export default function Navbar({ season, onSeasonChange, mode, onModeChange }: Props) {
   const location = useLocation();
   const isPlayersActive = location.pathname === '/' || location.pathname.startsWith('/players');
   const isTeamsActive = location.pathname.startsWith('/teams');
   const isLeaderboardActive = location.pathname.startsWith('/leaderboard');
   const isArchetypesActive = location.pathname.startsWith('/archetypes');
   const isDraftingActive = location.pathname.startsWith('/drafting');
+  const showModeToggle = mode != null && onModeChange && (
+    isPlayersActive ||
+    isTeamsActive ||
+    isLeaderboardActive ||
+    isArchetypesActive ||
+    isDraftingActive
+  );
 
   return (
     <nav className="glass border-b border-white/5 sticky top-0 z-50 backdrop-blur-xl">
@@ -83,9 +94,14 @@ export default function Navbar({ season, onSeasonChange }: Props) {
               Drafting
             </NavLink>
           </div>
-          {season != null && onSeasonChange && (
-            <SeasonSelector season={season} onChange={onSeasonChange} />
-          )}
+          <div className="flex items-center gap-3">
+            {showModeToggle && (
+              <ModeToggle mode={mode} onChange={onModeChange} />
+            )}
+            {season != null && onSeasonChange && (
+              <SeasonSelector season={season} onChange={onSeasonChange} />
+            )}
+          </div>
         </div>
       </div>
     </nav>
