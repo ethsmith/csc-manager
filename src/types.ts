@@ -5,6 +5,7 @@ export interface GroupedPlayer {
   name: string;
   cscTier: string | null;
   cscPlayerType: string | null;
+  cscMmr: number | null;
   regulation: PlayerStats | null;
   combine: PlayerStats | null;
 }

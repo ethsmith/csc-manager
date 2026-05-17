@@ -357,6 +357,8 @@ export default function Drafting({ players, mode }: Props) {
   const [search, setSearch] = useState('');
   const [draftList, setDraftList] = useState<string[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<Set<PlayerType>>(new Set());
+  const [minMmr, setMinMmr] = useState('');
+  const [maxMmr, setMaxMmr] = useState('');
   const [deOnly, setDeOnly] = useState(false);
   const [cscPlayers, setCscPlayers] = useState<CscPlayer[]>([]);
   const [removedRosterIds, setRemovedRosterIds] = useState<Set<string>>(new Set());
@@ -690,10 +692,18 @@ export default function Drafting({ players, mode }: Props) {
     }
     if (totalGap <= 0) return [];
 
-    // Only consider available players not on roster and not drafted
     const draftSet = new Set(draftList);
+    const min = Number(minMmr);
+    const max = Number(maxMmr);
+    const hasMin = minMmr.trim() !== '' && !Number.isNaN(min);
+    const hasMax = maxMmr.trim() !== '' && !Number.isNaN(max);
     const candidatePool = tierPool.filter(
-      ({ gp }) => !rosterSteamIds.has(gp.steamId) && !draftSet.has(gp.steamId) && (!deOnly || gp.cscPlayerType === 'DRAFT_ELIGIBLE'),
+      ({ gp }) =>
+        !rosterSteamIds.has(gp.steamId) &&
+        !draftSet.has(gp.steamId) &&
+        (!deOnly || gp.cscPlayerType === 'DRAFT_ELIGIBLE') &&
+        (!hasMin || (gp.cscMmr != null && gp.cscMmr >= min)) &&
+        (!hasMax || (gp.cscMmr != null && gp.cscMmr <= max)),
     );
     const scored = candidatePool.map(({ gp, stats }) => {
       let weightedImprovement = 0;
@@ -744,7 +754,7 @@ export default function Drafting({ players, mode }: Props) {
     }
 
     return scored;
-  }, [rosterGapAnalysis, tierPool, draftList, rosterSteamIds, selectedGapStats, deOnly]);
+  }, [rosterGapAnalysis, tierPool, draftList, rosterSteamIds, selectedGapStats, deOnly, minMmr, maxMmr]);
 
   /* ── Filtered & Sorted Available Players ──────────────────────── */
 
@@ -761,9 +771,19 @@ export default function Drafting({ players, mode }: Props) {
     if (selectedTypes.size > 0) {
       result = result.filter((gp) => gp.cscPlayerType && selectedTypes.has(gp.cscPlayerType as PlayerType));
     }
+    const min = Number(minMmr);
+    const max = Number(maxMmr);
+    const hasMin = minMmr.trim() !== '' && !Number.isNaN(min);
+    const hasMax = maxMmr.trim() !== '' && !Number.isNaN(max);
+    if (hasMin) {
+      result = result.filter((gp) => gp.cscMmr != null && gp.cscMmr >= min);
+    }
+    if (hasMax) {
+      result = result.filter((gp) => gp.cscMmr != null && gp.cscMmr <= max);
+    }
     const q = search.toLowerCase();
     return result.filter((gp) => gp.name.toLowerCase().includes(q));
-  }, [availablePlayers, search, selectedTypes]);
+  }, [availablePlayers, search, selectedTypes, minMmr, maxMmr]);
 
   /* ── Draft list ───────────────────────────────────────────────── */
 
@@ -1348,6 +1368,7 @@ export default function Drafting({ players, mode }: Props) {
                               <th className="text-left px-3 py-2 font-medium uppercase tracking-wider">Player</th>
                               <th className="text-left px-2 py-2 font-medium uppercase tracking-wider">Type</th>
                               <th className="text-left px-3 py-2 font-medium uppercase tracking-wider">Archetype</th>
+                              <th className="text-right px-2 py-2 font-medium uppercase tracking-wider">MMR</th>
                               <th className="text-right px-2 py-2 font-medium uppercase tracking-wider">G</th>
                               <th className="text-right px-3 py-2 font-medium uppercase tracking-wider">Rating</th>
                               <th className="text-right px-3 py-2 font-medium uppercase tracking-wider">Skill</th>
@@ -1396,6 +1417,9 @@ export default function Drafting({ players, mode }: Props) {
                                     ) : (
                                       <span className="text-xs text-slate-600">—</span>
                                     )}
+                                  </td>
+                                  <td className="px-2 py-2 text-right text-xs text-slate-400">
+                                    {gp.cscMmr != null && gp.cscMmr > 0 ? gp.cscMmr : '—'}
                                   </td>
                                   <td className="px-2 py-2 text-right text-xs text-slate-400">{s.games}</td>
                                   <td className={`px-3 py-2 text-right font-semibold text-xs ${getStatColor(s.finalRating, statRanges.hltvRating)}`}>
@@ -1488,7 +1512,7 @@ export default function Drafting({ players, mode }: Props) {
                   </span>
                 </div>
 
-                {availableTypes.length > 0 && (
+                {(availableTypes.length > 0 || availablePlayers.length > 0) && (
                   <div className="px-5 py-2.5 border-b border-white/5 flex flex-wrap items-center gap-2">
                     <Filter size={14} className="text-slate-500" />
                     {availableTypes.map((type) => {
@@ -1507,6 +1531,35 @@ export default function Drafting({ players, mode }: Props) {
                         </button>
                       );
                     })}
+                    <div className="flex items-center gap-2 ml-auto">
+                      <span className="text-xs text-slate-500">MMR</span>
+                      <input
+                        type="number"
+                        placeholder="Min"
+                        value={minMmr}
+                        onChange={(e) => setMinMmr(e.target.value)}
+                        className="w-20 bg-dark-800/60 rounded-lg px-2 py-1 text-xs text-slate-200 border border-white/5 focus:border-accent/40 focus:outline-none placeholder:text-slate-600"
+                      />
+                      <span className="text-xs text-slate-600">-</span>
+                      <input
+                        type="number"
+                        placeholder="Max"
+                        value={maxMmr}
+                        onChange={(e) => setMaxMmr(e.target.value)}
+                        className="w-20 bg-dark-800/60 rounded-lg px-2 py-1 text-xs text-slate-200 border border-white/5 focus:border-accent/40 focus:outline-none placeholder:text-slate-600"
+                      />
+                      {(minMmr || maxMmr) && (
+                        <button
+                          onClick={() => {
+                            setMinMmr('');
+                            setMaxMmr('');
+                          }}
+                          className="text-xs text-slate-500 hover:text-red-400 transition-colors cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -1516,6 +1569,7 @@ export default function Drafting({ players, mode }: Props) {
                       <tr className="border-b border-white/5 text-xs text-slate-400">
                         <th className="text-left px-3 py-2.5 font-medium uppercase tracking-wider">Player</th>
                         <th className="text-left px-2 py-2.5 font-medium uppercase tracking-wider">Type</th>
+                        <th className="text-right px-2 py-2.5 font-medium uppercase tracking-wider">MMR</th>
                         <th className="text-left px-2 py-2.5 font-medium uppercase tracking-wider">Archetype</th>
                         <th className="text-right px-2 py-2.5 font-medium uppercase tracking-wider">Skill</th>
                         <th className="text-right px-2 py-2.5 font-medium uppercase tracking-wider">G</th>
@@ -1571,6 +1625,9 @@ export default function Drafting({ players, mode }: Props) {
                               ) : (
                                 <span className="text-xs text-slate-600">—</span>
                               )}
+                            </td>
+                            <td className="px-2 py-2 text-right text-xs text-slate-400">
+                              {gp.cscMmr != null && gp.cscMmr > 0 ? gp.cscMmr : '—'}
                             </td>
                             <td className="px-2 py-2">
                               {archDef ? (
@@ -1653,7 +1710,7 @@ export default function Drafting({ players, mode }: Props) {
                       })}
                       {filteredPlayers.length === 0 && (
                         <tr>
-                          <td colSpan={17} className="px-4 py-8 text-center text-slate-500">
+                          <td colSpan={18} className="px-4 py-8 text-center text-slate-500">
                             {availablePlayers.length === 0
                               ? `No players found in tier "${tier}" with ${mode} stats`
                               : 'No players match your search'}

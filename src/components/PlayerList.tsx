@@ -10,20 +10,21 @@ interface Props {
   onSelect: (player: GroupedPlayer) => void;
 }
 
-type SortKey = keyof PlayerStats;
+type PlayerFieldKey = keyof PlayerStats | 'cscMmr';
+type SortKey = PlayerFieldKey;
 type SortDir = 'asc' | 'desc';
 type NumOp = '<' | '>' | '>=' | '<=' | '=';
 type StrOp = 'equals' | 'contains';
 
 interface StatFilter {
   id: number;
-  field: keyof PlayerStats;
+  field: PlayerFieldKey;
   op: NumOp | StrOp;
   value: string;
 }
 
 interface StatFieldDef {
-  key: keyof PlayerStats;
+  key: PlayerFieldKey;
   label: string;
   type: 'number' | 'string';
   group: string;
@@ -34,6 +35,7 @@ const STAT_FIELDS: StatFieldDef[] = [
   { key: 'name', label: 'Name', type: 'string', group: 'Identity' },
   { key: 'teamName', label: 'Team', type: 'string', group: 'Identity' },
   { key: 'steamId', label: 'Steam ID', type: 'string', group: 'Identity' },
+  { key: 'cscMmr', label: 'MMR', type: 'number', group: 'Identity' },
   // Core
   { key: 'games', label: 'Games', type: 'number', group: 'Core' },
   { key: 'finalRating', label: 'Final Rating', type: 'number', group: 'Core' },
@@ -235,7 +237,7 @@ const STR_OPS: { value: StrOp; label: string }[] = [
   { value: 'equals', label: 'equals' },
 ];
 
-const FIELD_MAP = new Map(STAT_FIELDS.map((f) => [f.key, f]));
+const FIELD_MAP = new Map<PlayerFieldKey, StatFieldDef>(STAT_FIELDS.map((f) => [f.key, f]));
 
 // CSC Core tier ordering (lowest to highest)
 const CSC_TIER_ORDER = ['recruit', 'prospect', 'contender', 'challenger', 'elite', 'premier'];
@@ -245,9 +247,10 @@ function getTierRank(tier: string): number {
   return idx === -1 ? CSC_TIER_ORDER.length : idx;
 }
 
-const TABLE_COLUMNS: { key: keyof PlayerStats | 'playerName'; label: string; sortable: boolean }[] = [
+const TABLE_COLUMNS: { key: SortKey | 'playerName'; label: string; sortable: boolean }[] = [
   { key: 'playerName', label: 'Player', sortable: true },
   { key: 'teamName', label: 'Tier', sortable: true },
+  { key: 'cscMmr', label: 'MMR', sortable: true },
   { key: 'games', label: 'Games', sortable: true },
   { key: 'finalRating', label: 'Rating', sortable: true },
   { key: 'kills', label: 'Kills', sortable: true },
@@ -287,18 +290,25 @@ function applyStrOp(val: string, op: StrOp, target: string): boolean {
   }
 }
 
-function applyFilter(stats: PlayerStats, filter: StatFilter): boolean {
+function getFieldValue(gp: GroupedPlayer, stats: PlayerStats, field: PlayerFieldKey): string | number | null {
+  if (field === 'cscMmr') return gp.cscMmr;
+  return stats[field];
+}
+
+function applyFilter(gp: GroupedPlayer, stats: PlayerStats, filter: StatFilter): boolean {
   const def = FIELD_MAP.get(filter.field);
   if (!def || !filter.value.trim()) return true;
+
+  const value = getFieldValue(gp, stats, filter.field);
 
   if (def.type === 'number') {
     const target = parseFloat(filter.value);
     if (isNaN(target)) return true;
-    const val = stats[filter.field] as number;
-    return applyNumOp(val, filter.op as NumOp, target);
+    if (typeof value !== 'number' || Number.isNaN(value)) return false;
+    return applyNumOp(value, filter.op as NumOp, target);
   } else {
-    const val = String(stats[filter.field]);
-    return applyStrOp(val, filter.op as StrOp, filter.value);
+    if (value == null) return false;
+    return applyStrOp(String(value), filter.op as StrOp, filter.value);
   }
 }
 
@@ -422,17 +432,23 @@ export default function PlayerList({ players, mode, onSelect }: Props) {
     // Apply stat filters
     for (const filter of filters) {
       if (!filter.value.trim()) continue;
-      result = result.filter(({ stats }) => applyFilter(stats, filter));
+      result = result.filter(({ gp, stats }) => applyFilter(gp, stats, filter));
     }
 
     result.sort((a, b) => {
       let cmp = 0;
-      if (sortKey === 'name') {
-        cmp = a.gp.name.localeCompare(b.gp.name);
-      } else if (sortKey === 'teamName') {
-        cmp = (a.stats.teamName as string).localeCompare(b.stats.teamName as string);
+      const aValue = getFieldValue(a.gp, a.stats, sortKey);
+      const bValue = getFieldValue(b.gp, b.stats, sortKey);
+      const aMissing = aValue == null || (typeof aValue === 'number' && Number.isNaN(aValue));
+      const bMissing = bValue == null || (typeof bValue === 'number' && Number.isNaN(bValue));
+      if (aMissing || bMissing) {
+        if (aMissing && bMissing) return 0;
+        return aMissing ? 1 : -1;
+      }
+      if (typeof aValue === 'string' || typeof bValue === 'string') {
+        cmp = String(aValue).localeCompare(String(bValue));
       } else {
-        cmp = (a.stats[sortKey] as number) - (b.stats[sortKey] as number);
+        cmp = aValue - bValue;
       }
       return sortDir === 'desc' ? -cmp : cmp;
     });
@@ -595,7 +611,7 @@ export default function PlayerList({ players, mode, onSelect }: Props) {
                 {/* Field selector */}
                 <select
                   value={filter.field}
-                  onChange={(e) => updateFilter(filter.id, { field: e.target.value as keyof PlayerStats })}
+                  onChange={(e) => updateFilter(filter.id, { field: e.target.value as PlayerFieldKey })}
                   className="bg-dark-700 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-neon-blue/40 cursor-pointer min-w-[180px]"
                 >
                   {groupedFields.map(({ group, fields }) => (
@@ -723,6 +739,7 @@ export default function PlayerList({ players, mode, onSelect }: Props) {
                       {gp.cscTier ?? '-'}
                     </span>
                   </td>
+                  <td className="px-4 py-3 text-slate-300">{gp.cscMmr != null && gp.cscMmr > 0 ? gp.cscMmr : '-'}</td>
                   <td className="px-4 py-3 text-slate-300">{stats.games}</td>
                   <td className="px-4 py-3">
                     <span className={`font-bold text-lg ${ratingColor(stats.finalRating)}`}>
@@ -736,7 +753,7 @@ export default function PlayerList({ players, mode, onSelect }: Props) {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-slate-500">
+                  <td colSpan={8} className="px-4 py-12 text-center text-slate-500">
                     {search || filters.length > 0
                       ? 'No players match the current filters'
                       : `No ${mode} stats available`}

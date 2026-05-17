@@ -236,6 +236,8 @@ export async function fetchPlayerStats(season?: number): Promise<GroupedPlayer[]
 
   const cscTierMap = new Map<string, string>();
   const cscTypeMap = new Map<string, string>();
+  const cscMmrByNameMap = new Map<string, number>();
+  const cscMmrBySteamIdMap = new Map<string, number>();
   for (const player of cscPlayers) {
     const nameLower = player.name.toLowerCase();
     if (player.tier?.name) {
@@ -243,6 +245,12 @@ export async function fetchPlayerStats(season?: number): Promise<GroupedPlayer[]
     }
     if (player.type) {
       cscTypeMap.set(nameLower, player.type);
+    }
+    if (typeof player.mmr === 'number' && Number.isFinite(player.mmr)) {
+      cscMmrByNameMap.set(nameLower, player.mmr);
+      if (player.steam64Id) {
+        cscMmrBySteamIdMap.set(player.steam64Id, player.mmr);
+      }
     }
   }
 
@@ -261,6 +269,7 @@ export async function fetchPlayerStats(season?: number): Promise<GroupedPlayer[]
         name: String(api.name ?? ''),
         cscTier: null,
         cscPlayerType: null,
+        cscMmr: null,
         regulation: null,
         combine: null,
       };
@@ -276,6 +285,9 @@ export async function fetchPlayerStats(season?: number): Promise<GroupedPlayer[]
     if (!group.cscPlayerType) {
       group.cscPlayerType = cscTypeMap.get(nameLower) ?? null;
     }
+    if (group.cscMmr == null) {
+      group.cscMmr = cscMmrBySteamIdMap.get(steamId) ?? cscMmrByNameMap.get(nameLower) ?? null;
+    }
   }
 
   for (const api of combineResults) {
@@ -288,6 +300,7 @@ export async function fetchPlayerStats(season?: number): Promise<GroupedPlayer[]
         name: String(api.name ?? ''),
         cscTier: null,
         cscPlayerType: null,
+        cscMmr: null,
         regulation: null,
         combine: null,
       };
@@ -301,6 +314,9 @@ export async function fetchPlayerStats(season?: number): Promise<GroupedPlayer[]
     }
     if (!group.cscPlayerType) {
       group.cscPlayerType = cscTypeMap.get(nameLower) ?? null;
+    }
+    if (group.cscMmr == null) {
+      group.cscMmr = cscMmrBySteamIdMap.get(steamId) ?? cscMmrByNameMap.get(nameLower) ?? null;
     }
   }
 
